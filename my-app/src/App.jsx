@@ -2,6 +2,13 @@ import { useState, useMemo, useRef, useCallback, useEffect } from 'react'
 import Routing from './Router'
 import { supabase, getPublicStorageUrl } from './supabaseclient'
 
+/*
+  App.jsx
+  - Manages a global audio player (play, pause, resume, stop).
+  - Creates a 'player' API object that is passed down via Routing -> pages.
+  - Handles fetching signed URLs for private audio stored in Supabase storage.
+*/
+
 const initialPlayerState = {
   track: null,
   signedUrl: null,
@@ -14,9 +21,14 @@ const App = () => {
   const [playerState, setPlayerState] = useState(initialPlayerState)
   const audioRef = useRef(null)
 
+  /**
+   * playTrack
+   * - Given a track record, create a signed URL for the audio file and start playback.
+   */
   const playTrack = useCallback(async (track) => {
     if (!track?.audio_path) {
-      setPlayesrState({
+      // Fixed typo: setPlayerState (previously setPlayesrState) to avoid reference errors
+      setPlayerState({
         track,
         signedUrl: null,
         isPlaying: false,
@@ -53,6 +65,11 @@ const App = () => {
     }
   }, [])
 
+  /**
+   * pause/resume/stop functions
+   * - Control the HTMLAudioElement referenced by audioRef.
+   * - Update shared playerState accordingly.
+   */
   const pause = useCallback(() => {
     const audio = audioRef.current
     if (!audio) return
@@ -143,6 +160,7 @@ const App = () => {
       )
   }, [playerState.signedUrl])
 
+  // player object passed to pages for controlling playback
   const player = useMemo(
     () => ({
       currentTrack: playerState.track,
@@ -171,6 +189,7 @@ const App = () => {
   )
 }
 
+// GlobalAudioPlayer component renders the bottom player UI
 const GlobalAudioPlayer = ({ audioRef, playerState, pause, resume, stop }) => {
   const { track, isPlaying, loading, error } = playerState
   if (!track) return null

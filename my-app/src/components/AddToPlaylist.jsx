@@ -1,3 +1,7 @@
+// AddToPlaylist.jsx
+// - Modal UI to let the logged-in user add a track to an existing playlist or create a new playlist.
+// - Uses playlist_tracks to create the relation and avoids duplicates.
+
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../supabaseclient'
 
@@ -14,6 +18,7 @@ const AddToPlaylist = ({ session, track }) => {
   useEffect(() => {
     if (!open || !session?.user?.id) return
     const loadPlaylists = async () => {
+      // Load user's playlists when modal opens
       setLoading(true)
       setError(null)
       const { data, error: fetchError } = await supabase
@@ -28,6 +33,11 @@ const AddToPlaylist = ({ session, track }) => {
     loadPlaylists()
   }, [open, session?.user?.id])
 
+  /**
+   * addTrackToPlaylist
+   * - Ensures the track isn't already present in the playlist
+   * - Appends it to the end (computes next position)
+   */
   const addTrackToPlaylist = async (playlistId) => {
     if (!playlistId) return
     setError(null)
@@ -69,6 +79,10 @@ const AddToPlaylist = ({ session, track }) => {
     }
   }
 
+  /**
+   * handleCreatePlaylist
+   * - Creates a new playlist and immediately adds the track to it
+   */
   const handleCreatePlaylist = async (e) => {
     e.preventDefault()
     if (!newPlaylist.title.trim()) {

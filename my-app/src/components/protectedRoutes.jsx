@@ -1,3 +1,6 @@
+// ProtectedRoutes component
+// - Wraps routes that require an authenticated session.
+// - Shows a loading indicator while auth state is being determined, otherwise redirects to "/".
 import { Navigate } from 'react-router-dom'
 
 export default function ProtectedRoutes({ session, children, loading }) {

@@ -10,6 +10,12 @@ import LoginLayout from './components/LoginLayout'
 import Profile from './pages/Profile'
 import Upload from './pages/Upload'
 
+/*
+  Routing.jsx
+  - Checks Supabase auth state on mount.
+  - Shows the Auth UI when no session is present, otherwise redirects to /home.
+  - Exposes protected routes (Home, Profile, Upload) which rely on ProtectedRoute wrapper.
+*/
 const Routing = ({ player }) => {
   const [session, setSession] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -23,6 +29,7 @@ const Routing = ({ player }) => {
       setLoading(false)
     })
 
+    // Subscribe to auth state changes so UI updates on sign-in/out
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -42,6 +49,7 @@ const Routing = ({ player }) => {
   return (
     <BrowserRouter>
       <Routes>
+        {/* Root route shows login when not authenticated, or redirects to /home */}
         <Route
           path="/"
           element={
@@ -56,6 +64,7 @@ const Routing = ({ player }) => {
             )
           }
         />
+        {/* Protected pages */}
         <Route
           path="/home"
           element={

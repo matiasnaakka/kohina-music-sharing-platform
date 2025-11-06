@@ -1,3 +1,5 @@
+// LoginLayout
+// - Provides a full-screen background and overlay used by the authentication page.
 import React from 'react'
 
 const LoginLayout = ({ children }) => (
