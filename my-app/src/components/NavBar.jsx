@@ -1,9 +1,35 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
+import { supabase } from '../supabaseclient' // added import
 
 const NavBar = ({ session, onSignOut }) => {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
+  const [avatarUrl, setAvatarUrl] = useState(null) // new state
+
+  useEffect(() => {
+    if (!session?.user?.id) {
+      setAvatarUrl(null)
+      return
+    }
+    let isMounted = true
+    const loadAvatar = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('avatar_url')
+          .eq('id', session.user.id)
+          .single()
+        if (!error && isMounted) {
+          setAvatarUrl(data?.avatar_url || null)
+        }
+      } catch (err) {
+        if (isMounted) setAvatarUrl(null)
+      }
+    }
+    loadAvatar()
+    return () => { isMounted = false }
+  }, [session?.user?.id])
 
   const handleSignOutClick = (e) => {
     e.preventDefault()
@@ -42,7 +68,16 @@ const NavBar = ({ session, onSignOut }) => {
           <Link to="/upload" className="text-white hover:underline">
             Manage uploads
           </Link>
-          <span className="text-white">{session.user.email}</span>
+
+          {/* Replaced email text with profile avatar */}
+          <img
+            src={avatarUrl || '/default-avatar.png'}
+            alt={session.user.email || 'User avatar'}
+            title={session.user.email}
+            className="w-8 h-8 rounded-full object-cover border border-gray-700"
+            onError={(e) => { e.target.src = '/default-avatar.png' }}
+          />
+
           <button
             onClick={handleSignOutClick}
             className="bg-green-500 text-black px-3 py-1 rounded hover:bg-gray-200"
