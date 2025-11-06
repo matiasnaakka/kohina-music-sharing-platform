@@ -16,7 +16,7 @@ const App = () => {
 
   const playTrack = useCallback(async (track) => {
     if (!track?.audio_path) {
-      setPlayerState({
+      setPlayesrState({
         track,
         signedUrl: null,
         isPlaying: false,
