@@ -3,6 +3,8 @@ import { supabase, getPublicStorageUrl } from '../supabaseclient'
 import NavBar from '../components/NavBar'
 import AddToPlaylist from '../components/AddToPlaylist'
 
+//This code allows users to upload audio tracks and manage them.
+
 const sanitizeFileName = (name) => {
   if (!name) return `file-${Date.now()}`
   return name.replace(/[^a-z0-9.\-_]/gi, '').replace(/\s+/g, '-').toLowerCase()
@@ -170,6 +172,7 @@ export default function Upload({ session, player }) {
       const imageFileName = `${Date.now()}-${sanitizeFileName(imageFile.name)}`
       const imagePath = `${session.user.id}/tracks/${imageFileName}`
 
+      // Upload track image
       const { data: imageUploadData, error: imageUploadError } = await supabase.storage
         .from('track-images')
         .upload(imagePath, imageFile, { upsert: true, contentType: imageFile.type })
