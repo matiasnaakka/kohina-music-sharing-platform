@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase, getPublicStorageUrl } from '../supabaseclient'
 import NavBar from '../components/NavBar'
 import AddToPlaylist from '../components/AddToPlaylist'
