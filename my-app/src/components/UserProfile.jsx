@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseclient'
 
 const UserProfile = ({ session, isModal = false, onClose, readOnly = false }) => {
