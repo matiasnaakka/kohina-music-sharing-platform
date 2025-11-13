@@ -658,7 +658,7 @@ export default function Profile({ session, player }) {
                                   </span>
                                 </div>
                               </div>
-                              <div className="flex-shrink-0 min-w-[200px] flex items-center gap-2 mt-3 md:mt-0">
+                              <div className="shrink-0 min-w-[200px] flex items-center gap-2 mt-3 md:mt-0">
                                 {canPlay ? (
                                   <>
                                     <button
@@ -750,7 +750,7 @@ export default function Profile({ session, player }) {
                       <img
                         src={user.avatar_url || '/default-avatar.png'}
                         alt={user.username || user.id}
-                        className="h-10 w-10 flex-shrink-0 object-cover"
+                        className="h-10 w-10 shrink-0 object-cover"
                         onError={(e) => { e.target.src = '/default-avatar.png' }}
                       />
                       <span className="text-white">{user.username || user.id}</span>
