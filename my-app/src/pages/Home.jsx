@@ -323,7 +323,7 @@ export default function Home({ session, player }) {
                       </div>
                     </div>
                     
-                    <div className="flex-shrink-0 min-w-[200px] flex items-center gap-2">
+                    <div className="shrink-0 min-w-[200px] flex items-center gap-2">
                       {canPlay ? (
                         <>
                           <button
