@@ -2,7 +2,7 @@
 // - Modal UI to let the logged-in user add a track to an existing playlist or create a new playlist.
 // - Uses playlist_tracks to create the relation and avoids duplicates.
 
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '../supabaseclient'
 
 const AddToPlaylist = ({ session, track }) => {
