@@ -117,6 +117,8 @@ export default function Profile({ session, player }) {
           .eq('follower_id', targetUserId)
         if (followingCountError) throw followingCountError
 
+
+        // set follow status
         let userFollows = false
         if (session?.user?.id) {
           const { count: followStatusCount = 0, error: followStatusError } = await supabase
@@ -471,7 +473,7 @@ export default function Profile({ session, player }) {
                                     </span>
                                   </div>
                                 </div>
-                                <div className="flex-shrink-0 min-w-[200px] flex items-center gap-2 mt-3 md:mt-0">
+                                <div className="shrink-0 min-w-[200px] flex items-center gap-2 mt-3 md:mt-0">
                                   {canPlay ? (
                                     <>
                                       <button
