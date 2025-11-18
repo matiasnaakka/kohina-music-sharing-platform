@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseclient'
 
 const UserProfile = ({ session, isModal = false, onClose, readOnly = false }) => {
@@ -12,8 +13,10 @@ const UserProfile = ({ session, isModal = false, onClose, readOnly = false }) =>
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(null)
   const [avatarKey, setAvatarKey] = useState(Date.now())
+  const [deleting, setDeleting] = useState(false)
   const [followingCount, setFollowingCount] = useState(0)
   const [followerCount, setFollowerCount] = useState(0)
+  const navigate = useNavigate()
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -160,6 +163,47 @@ const UserProfile = ({ session, isModal = false, onClose, readOnly = false }) =>
     }
   }
 
+  // Delete profile handler: invokes edge/function 'delete-account' and signs the user out on success
+  const handleDeleteProfile = async () => {
+    if (!session?.user?.id) return
+
+    const confirmed = window.confirm(
+      'This will delete your account (soft-delete) and it will be permanently removed after 30 days. Are you sure?'
+    )
+    if (!confirmed) return
+
+    setError(null)
+    setSuccess(null)
+    setDeleting(true)
+
+    try {
+      // Do NOT send user_id in the body. The Edge Function reads the user id from the JWT.
+      const { error: fnError } = await supabase.functions.invoke('delete-account', {
+        body: {} // body is optional; can also omit this entirely
+      })
+
+      if (fnError) {
+        throw fnError
+      }
+
+      setSuccess('Your account has been scheduled for deletion.')
+
+      try {
+        await supabase.auth.signOut()
+      } catch (signOutErr) {
+        console.error('Sign out after delete failed:', signOutErr)
+      }
+
+      if (onClose) onClose()
+      navigate('/')
+    } catch (err) {
+      console.error('Delete profile error:', err)
+      setError(err?.message || 'Failed to delete profile.')
+    } finally {
+      setDeleting(false)
+    }
+  }
+
   if (!session) return <div>Please log in to view your profile.</div>
   if (loading && !profile.username) return <div>Loading...</div>
 
@@ -299,6 +343,21 @@ const UserProfile = ({ session, isModal = false, onClose, readOnly = false }) =>
         >
           {loading ? 'Saving...' : 'Update Profile'}
         </button>
+
+        {/* Delete profile action */}
+        <div className="pt-2 border-t border-gray-800 mt-2">
+          <p className="text-xs text-gray-400 mb-2">
+            Delete your account. It will be marked for deletion now and permanently removed after 30 days.
+          </p>
+          <button
+            type="button"
+            onClick={handleDeleteProfile}
+            className="bg-red-600 text-white px-4 py-2 rounded font-semibold hover:bg-red-500 disabled:opacity-60"
+            disabled={deleting}
+          >
+            {deleting ? 'Deleting…' : 'Delete Profile'}
+          </button>
+        </div>
       </form>
     </div>
   )
