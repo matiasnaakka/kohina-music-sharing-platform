@@ -74,20 +74,35 @@ const App = () => {
     const audio = audioRef.current
     if (!audio) return
     audio.pause()
+    // Ensure UI state is updated immediately
     setPlayerState((prev) => ({
       ...prev,
       isPlaying: false,
+      loading: false,
+      error: null,
     }))
   }, [])
 
   const resume = useCallback(() => {
     const audio = audioRef.current
     if (!audio) return
+    // Mark loading while attempting to resume
+    setPlayerState((prev) => ({ ...prev, loading: true, error: null }))
     audio
       .play()
+      .then(() => {
+        // On successful play, update state to playing
+        setPlayerState((prev) => ({
+          ...prev,
+          isPlaying: true,
+          loading: false,
+          error: null,
+        }))
+      })
       .catch((err) =>
         setPlayerState((prev) => ({
           ...prev,
+          loading: false,
           error: err.message,
         })),
       )
@@ -143,7 +158,7 @@ const App = () => {
       audio.removeEventListener('ended', handleEnded)
       audio.removeEventListener('error', handleError)
     }
-  }, [])
+  }, [audioRef.current])
 
   useEffect(() => {
     const audio = audioRef.current
