@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase, getPublicStorageUrl } from '../supabaseclient'
+import imageCompression from 'browser-image-compression'
 import NavBar from '../components/NavBar'
 import AddToPlaylist from '../components/AddToPlaylist'
 
@@ -158,7 +159,7 @@ export default function Upload({ session, player }) {
       
       console.log('Uploading file:', { filePath, fileType: file.type, fileSize: file.size })
       
-      // 2. Upload with upsert option and log complete response
+      // 2. Upload audio file
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('audio')
         .upload(filePath, file, { upsert: true })
@@ -169,13 +170,39 @@ export default function Upload({ session, player }) {
         throw new Error(`Upload error: ${uploadError.message}`)
       }
       
+      // Compress cover image before upload to avoid server-side size limits (5MB)
+      const compressOptions = {
+        maxSizeMB: 1, // target ~1MB (adjust as needed)
+        maxWidthOrHeight: 1920,
+        useWebWorker: true,
+        initialQuality: 0.8,
+      }
+      let compressedBlob
+      try {
+        compressedBlob = await imageCompression(imageFile, compressOptions)
+      } catch (compErr) {
+        console.warn('Image compression failed, falling back to original image', compErr)
+        compressedBlob = imageFile
+      }
+
+      // Ensure compressed result is a File with the original filename
+      const compressedFile = new File(
+        [compressedBlob],
+        `${Date.now()}-${sanitizeFileName(imageFile.name)}`,
+        { type: compressedBlob.type || imageFile.type }
+      )
+
+      if (compressedFile.size > 5 * 1024 * 1024) {
+        throw new Error('Cover image is too large even after compression. Please choose a smaller image (<5MB).')
+      }
+
       const imageFileName = `${Date.now()}-${sanitizeFileName(imageFile.name)}`
       const imagePath = `${session.user.id}/tracks/${imageFileName}`
 
-      // Upload track image
+      // Upload compressed track image
       const { data: imageUploadData, error: imageUploadError } = await supabase.storage
         .from('track-images')
-        .upload(imagePath, imageFile, { upsert: true, contentType: imageFile.type })
+        .upload(imagePath, compressedFile, { upsert: true, contentType: compressedFile.type })
 
       if (imageUploadError) {
         throw new Error(`Image upload error: ${imageUploadError.message}`)
@@ -237,11 +264,28 @@ export default function Upload({ session, player }) {
     setError(null)
     setSuccess(null)
     try {
+      // Compress image before upload to respect the 5MB limit
+      const compressOptions = { maxSizeMB: 1, maxWidthOrHeight: 1920, useWebWorker: true, initialQuality: 0.8 }
+      let compressedBlob
+      try {
+        compressedBlob = await imageCompression(coverFile, compressOptions)
+      } catch (compErr) {
+        console.warn('Image compression failed, using original cover', compErr)
+        compressedBlob = coverFile
+      }
+      const compressedFile = new File(
+        [compressedBlob],
+        `${trackId}-${Date.now()}-${sanitizeFileName(coverFile.name)}`,
+        { type: compressedBlob.type || coverFile.type }
+      )
+      if (compressedFile.size > 5 * 1024 * 1024) {
+        throw new Error('Cover image is too large even after compression. Please choose a smaller image (<5MB).')
+      }
       const imageFileName = `${trackId}-${Date.now()}-${sanitizeFileName(coverFile.name)}`
       const newImagePath = `${session.user.id}/tracks/${imageFileName}`
       const { data, error } = await supabase.storage
         .from('track-images')
-        .upload(newImagePath, coverFile, { upsert: true, contentType: coverFile.type })
+        .upload(newImagePath, compressedFile, { upsert: true, contentType: compressedFile.type })
       if (error) throw new Error(`Image upload error: ${error.message}`)
       const finalPath = data?.path || newImagePath
       const { error: updateError } = await supabase
