@@ -168,7 +168,7 @@ const UserProfile = ({ session, isModal = false, onClose, readOnly = false }) =>
     if (!session?.user?.id) return
 
     const confirmed = window.confirm(
-      'This will delete your account (soft-delete) and it will be permanently removed after 30 days. Are you sure?'
+      'This will immediately delete your account and all your data. This cannot be undone. Are you sure?'
     )
     if (!confirmed) return
 
