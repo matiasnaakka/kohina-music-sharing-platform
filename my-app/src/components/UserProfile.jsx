@@ -310,7 +310,7 @@ const UserProfile = ({ session, isModal = false, onClose, readOnly = false }) =>
           <input
             type="text"
             name="username"
-            value={profile.username}
+            value={profile.username ?? ''}
             onChange={handleChange}
             className="w-full p-2 rounded text-white"
             required
@@ -320,7 +320,7 @@ const UserProfile = ({ session, isModal = false, onClose, readOnly = false }) =>
           Bio
           <textarea
             name="bio"
-            value={profile.bio}
+            value={profile.bio ?? ''}
             onChange={handleChange}
             className="w-full p-2 rounded text-white"
             rows={3}
@@ -331,7 +331,7 @@ const UserProfile = ({ session, isModal = false, onClose, readOnly = false }) =>
           <input
             type="text"
             name="location"
-            value={profile.location}
+            value={profile.location ?? ''}
             onChange={handleChange}
             className="w-full p-2 rounded text-white"
           />
