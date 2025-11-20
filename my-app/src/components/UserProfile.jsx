@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseclient'
+import imageCompression from 'browser-image-compression'
 
 const UserProfile = ({ session, isModal = false, onClose, readOnly = false }) => {
   const [profile, setProfile] = useState({
@@ -63,7 +64,7 @@ const UserProfile = ({ session, isModal = false, onClose, readOnly = false }) =>
   }
 
   const handleAvatarChange = async (e) => {
-    const file = e.target.files[0]
+    const file = e.target.files?.[0]
     if (!file) return
     
     // Clear previous messages
@@ -72,29 +73,61 @@ const UserProfile = ({ session, isModal = false, onClose, readOnly = false }) =>
     setLoading(true)
     
     try {
-      // Use a stable filename with timestamp to avoid caching issues
+      // If file is large, compress it (or attempt compression for all images to reduce size)
+      const MAX_MB = 5
+      const compressOptions = {
+        maxSizeMB: 1, // target size (adjust as needed)
+        maxWidthOrHeight: 1920,
+        useWebWorker: true,
+        initialQuality: 0.8,
+      }
+
+      let toUploadBlob = file
+      try {
+        // Attempt compression — imageCompression will return a Blob
+        const compressed = await imageCompression(file, compressOptions)
+        // Use compressed result if smaller
+        if (compressed && compressed.size > 0 && compressed.size < file.size) {
+          toUploadBlob = compressed
+        }
+      } catch (compErr) {
+        console.warn('Avatar compression failed, using original file', compErr)
+        toUploadBlob = file
+      }
+
+      // Ensure upload is a File and has a sensible name/type
+      const ext = (file.name && file.name.split('.').pop()) || 'png'
       const timestamp = Date.now()
-      const path = `${session.user.id}/avatar-${timestamp}.png`
+      const uploadFile = new File(
+        [toUploadBlob],
+        `avatar-${timestamp}.${ext}`,
+        { type: toUploadBlob.type || file.type }
+      )
+
+      if (uploadFile.size > MAX_MB * 1024 * 1024) {
+        throw new Error(`Avatar image is too large even after compression. Please choose an image under ${MAX_MB}MB.`)
+      }
+
+      // Use a stable storage path
+      const path = `${session.user.id}/avatar-${timestamp}.${ext}`
       
-      console.log('Uploading avatar...', file.name)
+      console.log('Uploading avatar...', uploadFile.name, 'size', uploadFile.size)
       
       // Upload avatar to Supabase Storage
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('avatars')
-        .upload(path, file, { upsert: true })
+        .upload(path, uploadFile, { upsert: true, contentType: uploadFile.type })
         
       if (uploadError) {
         throw new Error(`Upload error: ${uploadError.message}`)
       }
       
-      // Get the public URL with cache busting parameter
+      // Get the public URL and update DB
       const { data: urlData } = supabase.storage
         .from('avatars')
         .getPublicUrl(path)
       
       const avatarUrl = `${urlData.publicUrl}?t=${timestamp}`
-      
-      console.log('Avatar uploaded, URL:', avatarUrl)
       
       // Persist to database immediately
       const updates = { 
@@ -125,7 +158,7 @@ const UserProfile = ({ session, isModal = false, onClose, readOnly = false }) =>
       console.log('Avatar update complete!')
     } catch (err) {
       console.error('Avatar update failed:', err)
-      setError(err.message)
+      setError(err.message || String(err))
     } finally {
       setLoading(false)
     }
