@@ -9,6 +9,7 @@ import ProtectedRoute from './components/protectedRoutes'
 import LoginLayout from './components/LoginLayout'
 import Profile from './pages/Profile'
 import Upload from './pages/Upload'
+import PasswordResetForm from './components/PasswordResetForm'
 
 /*
   Routing.jsx
@@ -59,11 +60,26 @@ const Routing = ({ player }) => {
               <Navigate to="/home" replace />
             ) : (
               <LoginLayout>
-                <Auth supabaseClient={supabase} appearance={{ theme: ThemeSupa }} providers={[]} />
+                <Auth supabaseClient={supabase} appearance={{ theme: ThemeSupa }} providers={[]} redirectTo={`${window.location.origin}/reset-password`} />
+                
               </LoginLayout>
             )
           }
         />
+
+        {/* Password reset route - handles callback from email link */}
+        <Route
+          path="/reset-password"
+          element={
+            <PasswordResetForm
+              onResetComplete={() => {
+                // Redirect to home or login after successful reset
+                window.location.href = '/home'
+              }}
+            />
+          }
+        />
+
         {/* Protected pages */}
         <Route
           path="/home"

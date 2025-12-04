@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseclient'
 import imageCompression from 'browser-image-compression'
+import PasswordResetRequest from './PasswordResetRequest'
 
 const UserProfile = ({ session, isModal = false, onClose, readOnly = false }) => {
   const [profile, setProfile] = useState({
@@ -17,6 +18,7 @@ const UserProfile = ({ session, isModal = false, onClose, readOnly = false }) =>
   const [deleting, setDeleting] = useState(false)
   const [followingCount, setFollowingCount] = useState(0)
   const [followerCount, setFollowerCount] = useState(0)
+  const [showPasswordReset, setShowPasswordReset] = useState(false)
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -317,81 +319,99 @@ const UserProfile = ({ session, isModal = false, onClose, readOnly = false }) =>
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <div className="flex flex-col items-center">
-          <img
-            key={avatarKey}
-            src={profile.avatar_url ? `${profile.avatar_url}?t=${avatarKey}` : '/default-avatar.png'}
-            alt="Avatar"
-            className="w-24 h-24 mb-2 object-cover"
-            onError={(e) => { e.target.src = '/default-avatar.png' }}
-          />
+      {showPasswordReset ? (
+        <PasswordResetRequest onClose={() => setShowPasswordReset(false)} />
+      ) : (
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="flex flex-col items-center">
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleAvatarChange}
-              className="text-white"
-              id="avatar-upload"
+            <img
+              key={avatarKey}
+              src={profile.avatar_url ? `${profile.avatar_url}?t=${avatarKey}` : '/default-avatar.png'}
+              alt="Avatar"
+              className="w-24 h-24 mb-2 object-cover"
+              onError={(e) => { e.target.src = '/default-avatar.png' }}
             />
-            {loading && <p className="text-sm text-gray-400 mt-1">Uploading...</p>}
+            <div className="flex flex-col items-center">
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleAvatarChange}
+                className="text-white"
+                id="avatar-upload"
+              />
+              {loading && <p className="text-sm text-gray-400 mt-1">Uploading...</p>}
+            </div>
           </div>
-        </div>
 
-        <label>
-          Username
-          <input
-            type="text"
-            name="username"
-            value={profile.username ?? ''}
-            onChange={handleChange}
-            className="w-full p-2 rounded text-white"
-            required
-          />
-        </label>
-        <label>
-          Bio
-          <textarea
-            name="bio"
-            value={profile.bio ?? ''}
-            onChange={handleChange}
-            className="w-full p-2 rounded text-white"
-            rows={3}
-          />
-        </label>
-        <label>
-          Location
-          <input
-            type="text"
-            name="location"
-            value={profile.location ?? ''}
-            onChange={handleChange}
-            className="w-full p-2 rounded text-white"
-          />
-        </label>
-        <button
-          type="submit"
-          className="bg-teal-400 text-white px-4 py-2 rounded font-bold hover:bg-teal-300"
-          disabled={loading}
-        >
-          {loading ? 'Saving...' : 'Update Profile'}
-        </button>
-
-        {/* Delete profile action */}
-        <div className="pt-2 border-t border-gray-800 mt-2">
-          <p className="text-xs text-gray-400 mb-2">
-            Delete your account. It will be marked for deletion now and permanently removed after 30 days.
-          </p>
+          <label>
+            Username
+            <input
+              type="text"
+              name="username"
+              value={profile.username ?? ''}
+              onChange={handleChange}
+              className="w-full p-2 rounded text-white"
+              required
+            />
+          </label>
+          <label>
+            Bio
+            <textarea
+              name="bio"
+              value={profile.bio ?? ''}
+              onChange={handleChange}
+              className="w-full p-2 rounded text-white"
+              rows={3}
+            />
+          </label>
+          <label>
+            Location
+            <input
+              type="text"
+              name="location"
+              value={profile.location ?? ''}
+              onChange={handleChange}
+              className="w-full p-2 rounded text-white"
+            />
+          </label>
           <button
-            type="button"
-            onClick={handleDeleteProfile}
-            className="bg-red-600 text-white px-4 py-2 rounded font-semibold hover:bg-red-500 disabled:opacity-60"
-            disabled={deleting}
+            type="submit"
+            className="bg-teal-400 text-white px-4 py-2 rounded font-bold hover:bg-teal-300"
+            disabled={loading}
           >
-            {deleting ? 'Deleting…' : 'Delete Profile'}
+            {loading ? 'Saving...' : 'Update Profile'}
           </button>
-        </div>
-      </form>
+
+          {/* Password reset section */}
+          <div className="pt-2 border-t border-gray-800 mt-2">
+            <p className="text-xs text-gray-400 mb-2">
+              Reset your account password. We'll send a confirmation link to your email.
+            </p>
+            <button
+              type="button"
+              onClick={() => setShowPasswordReset(true)}
+              className="bg-blue-600 text-white px-4 py-2 rounded font-semibold hover:bg-blue-500 w-full mb-2"
+            >
+              Change Password
+            </button>
+          </div>
+
+          {/* Delete profile action */}
+          <div className="pt-2 border-t border-gray-800 mt-2">
+            <p className="text-xs text-gray-400 mb-2">
+              Delete your account. It will be marked for deletion now and permanently removed after 30 days.
+            </p>
+            <button
+              type="button"
+              onClick={handleDeleteProfile}
+              className="bg-red-600 text-white px-4 py-2 rounded font-semibold hover:bg-red-500 disabled:opacity-60 w-full"
+              disabled={deleting}
+            >
+              {deleting ? 'Deleting…' : 'Delete Profile'}
+            </button>
+          </div>
+        </form>
+      )}
     </div>
   )
 }
