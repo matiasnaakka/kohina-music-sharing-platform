@@ -10,6 +10,7 @@ import LoginLayout from './components/LoginLayout'
 import Profile from './pages/Profile'
 import Upload from './pages/Upload'
 import PasswordResetForm from './components/PasswordResetForm'
+import Playlist from './pages/Playlist'
 
 /*
   Routing.jsx
@@ -101,6 +102,14 @@ const Routing = ({ player }) => {
           element={
             <ProtectedRoute session={session} loading={loading}>
               <Upload session={session} player={player} />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/playlist"
+          element={
+            <ProtectedRoute session={session} loading={loading}>
+              <Playlist session={session} player={player} />
             </ProtectedRoute>
           }
         />

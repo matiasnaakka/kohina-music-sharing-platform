@@ -165,15 +165,20 @@ export default function Home({ session, player }) {
           ) : (
             <ul className="grid gap-2 sm:grid-cols-2">
               {ownPlaylists.map((playlist) => (
-                <li key={playlist.id} className="bg-gray-800 px-3 py-2 rounded">
-                  <p className="text-white font-semibold truncate">{playlist.title}</p>
-                  {playlist.description && (
-                    <p className="text-xs text-gray-400 line-clamp-2 mt-1">{playlist.description}</p>
-                  )}
-                  <p className="text-xs text-gray-500 mt-2">
-                    {playlist.is_public ? 'Public' : 'Private'} • Updated{' '}
-                    {new Date(playlist.updated_at).toLocaleDateString()}
-                  </p>
+                <li key={playlist.id}>
+                  <Link
+                    to={`/playlist?id=${playlist.id}`}
+                    className="block bg-gray-800 hover:bg-gray-700 px-3 py-2 rounded transition"
+                  >
+                    <p className="text-white font-semibold truncate">{playlist.title}</p>
+                    {playlist.description && (
+                      <p className="text-xs text-gray-400 line-clamp-2 mt-1">{playlist.description}</p>
+                    )}
+                    <p className="text-xs text-gray-500 mt-2">
+                      {playlist.is_public ? 'Public' : 'Private'} • Updated{' '}
+                      {new Date(playlist.updated_at).toLocaleDateString()}
+                    </p>
+                  </Link>
                 </li>
               ))}
             </ul>

@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import NavBar from '../components/NavBar'
 import { supabase, getPublicStorageUrl } from '../supabaseclient'
 import UserProfile from '../components/UserProfile'
-import { useLocation, useNavigate } from 'react-router-dom'
 import AddToPlaylist from '../components/AddToPlaylist'
 
 export default function Profile({ session, player }) {
@@ -513,14 +513,19 @@ export default function Profile({ session, player }) {
                     ) : (
                       <ul className="space-y-3 text-sm">
                         {ownPlaylists.map((playlist) => (
-                          <li key={playlist.id} className="bg-gray-800 px-3 py-2 rounded">
-                            <p className="text-white font-semibold">{playlist.title}</p>
-                            {playlist.description && (
-                              <p className="text-gray-400 text-xs mt-1 line-clamp-2">{playlist.description}</p>
-                            )}
-                            <p className="text-gray-500 text-xs mt-1">
-                              Updated {new Date(playlist.updated_at).toLocaleDateString()}
-                            </p>
+                          <li key={playlist.id}>
+                            <Link
+                              to={`/playlist?id=${playlist.id}`}
+                              className="block bg-gray-800 hover:bg-gray-700 px-3 py-2 rounded transition"
+                            >
+                              <p className="text-white font-semibold">{playlist.title}</p>
+                              {playlist.description && (
+                                <p className="text-gray-400 text-xs mt-1 line-clamp-2">{playlist.description}</p>
+                              )}
+                              <p className="text-gray-500 text-xs mt-1">
+                                Updated {new Date(playlist.updated_at).toLocaleDateString()}
+                              </p>
+                            </Link>
                           </li>
                         ))}
                       </ul>
@@ -698,14 +703,19 @@ export default function Profile({ session, player }) {
                   ) : (
                     <ul className="space-y-3 text-sm">
                       {publicPlaylists.map((playlist) => (
-                        <li key={playlist.id} className="bg-gray-800 px-3 py-2 rounded">
-                          <p className="text-white font-semibold">{playlist.title}</p>
-                          {playlist.description && (
-                            <p className="text-gray-400 text-xs mt-1 line-clamp-2">{playlist.description}</p>
-                          )}
-                          <p className="text-gray-500 text-xs mt-1">
-                            Updated {new Date(playlist.updated_at).toLocaleDateString()}
-                          </p>
+                        <li key={playlist.id}>
+                          <Link
+                            to={`/playlist?id=${playlist.id}`}
+                            className="block bg-gray-800 hover:bg-gray-700 px-3 py-2 rounded transition"
+                          >
+                            <p className="text-white font-semibold">{playlist.title}</p>
+                            {playlist.description && (
+                              <p className="text-gray-400 text-xs mt-1 line-clamp-2">{playlist.description}</p>
+                            )}
+                            <p className="text-gray-500 text-xs mt-1">
+                              Updated {new Date(playlist.updated_at).toLocaleDateString()}
+                            </p>
+                          </Link>
                         </li>
                       ))}
                     </ul>
