@@ -60,8 +60,7 @@ const Routing = ({ player }) => {
               <Navigate to="/home" replace />
             ) : (
               <LoginLayout>
-                <Auth supabaseClient={supabase} appearance={{ theme: ThemeSupa }} providers={[]} redirectTo={`${window.location.origin}/reset-password`} />
-                
+                <Auth supabaseClient={supabase} appearance={{ theme: ThemeSupa }} providers={[]} />
               </LoginLayout>
             )
           }
