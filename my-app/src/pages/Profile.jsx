@@ -4,6 +4,7 @@ import NavBar from '../components/NavBar'
 import { supabase, getPublicStorageUrl } from '../supabaseclient'
 import UserProfile from '../components/UserProfile'
 import AddToPlaylist from '../components/AddToPlaylist'
+import { useLikesV2 } from '../hooks/useLikesV2'
 
 export default function Profile({ session, player }) {
   const location = useLocation()
@@ -44,6 +45,11 @@ export default function Profile({ session, player }) {
   const [followModalUsers, setFollowModalUsers] = useState([])
   const [followModalLoading, setFollowModalLoading] = useState(false)
   const [followModalError, setFollowModalError] = useState(null)
+
+  // NEW: Add missing liked tracks state
+  const [likedTracks, setLikedTracks] = useState([])
+  const [likedTracksLoading, setLikedTracksLoading] = useState(false)
+  const [likedTracksError, setLikedTracksError] = useState(null)
 
   const handleSignOut = async () => {
     await supabase.auth.signOut()
@@ -88,7 +94,7 @@ export default function Profile({ session, player }) {
           .from('tracks')
           .select(`
             id, title, artist, album, audio_path, created_at, image_path,
-            genres (name)
+            genres(name)
           `)
           .eq('user_id', targetUserId)
           .eq('is_public', true)
@@ -182,7 +188,7 @@ export default function Profile({ session, player }) {
           .from('tracks')
           .select(`
             id, title, artist, album, audio_path, created_at, is_public, image_path,
-            genres (name)
+            genres(name)
           `)
           .eq('user_id', session.user.id)
           .is('deleted_at', null)
@@ -351,6 +357,88 @@ export default function Profile({ session, player }) {
     navigate(userId === session?.user?.id ? '/profile' : `/profile?user=${userId}`)
   }
 
+  // Like handlers
+  const { isLiked: isOwnTrackLiked, toggleLike: toggleOwnTrackLike, fetchLikedTracks: fetchOwnLikedTracks } = useLikesV2(session?.user?.id)
+  const { isLiked: isPublicTrackLiked, toggleLike: togglePublicTrackLike, fetchLikedTracks: fetchPublicLikedTracks } = useLikesV2(session?.user?.id)
+  const { isLiked: isLikedTrackLiked, toggleLike: toggleLikedTrackLike, fetchLikedTracks: fetchLikedTracksTracks } = useLikesV2(session?.user?.id)
+
+  // Fetch liked tracks when component mounts or user changes
+  useEffect(() => {
+    if (!isOwnProfile || !session?.user?.id) {
+      setLikedTracks([])
+      return
+    }
+
+    let isMounted = true
+    const fetchLikedTracks = async () => {
+      setLikedTracksLoading(true)
+      setLikedTracksError(null)
+      try {
+        const { data, error } = await supabase
+          .from('track_likes')
+          .select(`
+            track_id,
+            created_at,
+            tracks (
+              id,
+              title,
+              artist,
+              album,
+              audio_path,
+              created_at,
+              image_path,
+              user_id,
+              genres (name),
+              profiles!tracks_user_id_fkey(username, avatar_url)
+            )
+          `)
+          .eq('user_id', session.user.id)
+          .order('created_at', { ascending: false })
+          .limit(50)
+
+        if (error) throw error
+
+        const mappedTracks = (data || [])
+          .filter(item => item.tracks)
+          .map(item => item.tracks)
+
+        if (isMounted) {
+          setLikedTracks(mappedTracks)
+          // Fetch like state for these tracks
+          if (mappedTracks.length > 0) {
+            fetchLikedTracksTracks(mappedTracks.map(t => t.id))
+          }
+        }
+      } catch (err) {
+        if (isMounted) {
+          setLikedTracksError(err.message)
+          setLikedTracks([])
+        }
+      } finally {
+        if (isMounted) setLikedTracksLoading(false)
+      }
+    }
+
+    fetchLikedTracks()
+    return () => { isMounted = false }
+  }, [isOwnProfile, session?.user?.id, fetchLikedTracksTracks])
+
+  // Fetch liked tracks when own tracks load
+  useEffect(() => {
+    const trackIds = ownTracks.map(t => t.id)
+    if (trackIds.length > 0) {
+      fetchOwnLikedTracks(trackIds)
+    }
+  }, [ownTracks, fetchOwnLikedTracks])
+
+  // Fetch liked tracks when public tracks load
+  useEffect(() => {
+    const trackIds = publicTracks.map(t => t.id)
+    if (trackIds.length > 0) {
+      fetchPublicLikedTracks(trackIds)
+    }
+  }, [publicTracks, fetchPublicLikedTracks])
+
   return (
     <div className="min-h-screen bg-black text-white">
       <NavBar session={session} onSignOut={handleSignOut} />
@@ -409,6 +497,115 @@ export default function Profile({ session, player }) {
                   </div>
                 </div>
 
+                {/* Liked Tracks Section */}
+                <h3 className="text-2xl font-bold mb-4">Liked Tracks</h3>
+                <div className="mb-8">
+                  {likedTracksLoading ? (
+                    <div className="text-gray-300">Loading liked tracks...</div>
+                  ) : likedTracksError ? (
+                    <div className="bg-red-500 bg-opacity-25 text-red-100 p-3 rounded">
+                      {likedTracksError}
+                    </div>
+                  ) : likedTracks.length === 0 ? (
+                    <div className="text-gray-300 bg-gray-800 p-4 rounded">
+                      You haven't liked any tracks yet.
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 gap-4">
+                      {likedTracks.map((track) => {
+                        const coverSrc =
+                          getPublicStorageUrl('track-images', track.image_path) ||
+                          track.profiles?.avatar_url ||
+                          '/default-avatar.png'
+                        const isActive = player?.currentTrack?.id === track.id
+                        const isBusy = isActive && player?.loading
+                        const canPlay = Boolean(track.audio_path)
+                        const playbackLabel = isActive
+                          ? isBusy
+                            ? 'Loading...'
+                            : player?.isPlaying
+                              ? 'Pause'
+                              : 'Resume'
+                          : 'Play'
+                        const handlePlayback = () => {
+                          if (!player || !canPlay) return
+                          if (isActive) {
+                            player.isPlaying ? player.pause() : player.resume()
+                          } else {
+                            player.playTrack(track)
+                          }
+                        }
+                        const trackIsLiked = isLikedTrackLiked(track.id)
+                        return (
+                          <div key={track.id} className="bg-gray-800 bg-opacity-80 p-4 rounded text-white flex gap-4">
+                            <img
+                              src={coverSrc}
+                              alt={`${track.title} cover`}
+                              className="w-24 h-24 object-cover rounded"
+                              onError={(e) => { e.target.src = track.profiles?.avatar_url || '/default-avatar.png' }}
+                            />
+                            <div className="flex flex-col md:flex-row justify-between flex-1">
+                              <div>
+                                <h4 className="font-bold text-lg">{track.title}</h4>
+                                <p className="text-gray-300">
+                                  {track.artist} {track.album ? `• ${track.album}` : ''}
+                                </p>
+                                <div className="flex gap-2 items-center mt-1">
+                                  <span className="bg-gray-700 px-2 py-0.5 text-xs rounded">
+                                    {track.genres ? track.genres.name : 'No genre'}
+                                  </span>
+                                  <span className="text-xs text-gray-400">
+                                    By{' '}
+                                    <Link
+                                      to={`/profile?user=${track.user_id}`}
+                                      className="underline hover:text-teal-300"
+                                    >
+                                      {track.profiles?.username || 'Anonymous'}
+                                    </Link>
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="shrink-0 min-w-[200px] flex items-center gap-2 mt-3 md:mt-0 flex-wrap">
+                                {canPlay ? (
+                                  <>
+                                    <button
+                                      type="button"
+                                      onClick={handlePlayback}
+                                      disabled={isBusy}
+                                      className="bg-teal-500 text-black px-3 py-1 rounded text-sm font-semibold hover:bg-teal-400 disabled:opacity-60"
+                                    >
+                                      {playbackLabel}
+                                    </button>
+                                    {isActive && player?.error && !player.loading && (
+                                      <span className="max-w-[140px] truncate text-xs text-red-400">
+                                        {player.error}
+                                      </span>
+                                    )}
+                                  </>
+                                ) : (
+                                  <span className="text-red-400">Audio unavailable</span>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={() => toggleLikedTrackLike(track.id)}
+                                  className={`px-2 py-1 rounded text-sm font-semibold transition ${
+                                    trackIsLiked
+                                      ? 'bg-red-500 text-white hover:bg-red-400'
+                                      : 'bg-gray-700 text-white hover:bg-gray-600'
+                                  }`}
+                                >
+                                  {trackIsLiked ? '❤️ Liked' : '🤍 Like'}
+                                </button>
+                                <AddToPlaylist session={session} track={track} />
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+
                 <h3 className="text-2xl font-bold mb-4">Tracks</h3>
                 <div className="flex flex-col lg:flex-row gap-6">
                   <div className="flex-1">
@@ -447,6 +644,7 @@ export default function Profile({ session, player }) {
                               player.playTrack(track)
                             }
                           }
+                          const trackIsLiked = isOwnTrackLiked(track.id)
                           return (
                             <div key={track.id} className="bg-gray-800 bg-opacity-80 p-4 rounded text-white flex gap-4">
                               <img
@@ -473,7 +671,7 @@ export default function Profile({ session, player }) {
                                     </span>
                                   </div>
                                 </div>
-                                <div className="shrink-0 min-w-[200px] flex items-center gap-2 mt-3 md:mt-0">
+                                <div className="shrink-0 min-w-[200px] flex items-center gap-2 mt-3 md:mt-0 flex-wrap">
                                   {canPlay ? (
                                     <>
                                       <button
@@ -493,6 +691,17 @@ export default function Profile({ session, player }) {
                                   ) : (
                                     <span className="text-red-400">Audio unavailable</span>
                                   )}
+                                  <button
+                                    type="button"
+                                    onClick={() => toggleOwnTrackLike(track.id)}
+                                    className={`px-2 py-1 rounded text-sm font-semibold transition ${
+                                      trackIsLiked
+                                        ? 'bg-red-500 text-white hover:bg-red-400'
+                                        : 'bg-gray-700 text-white hover:bg-gray-600'
+                                    }`}
+                                  >
+                                    {trackIsLiked ? '❤️ Liked' : '🤍 Like'}
+                                  </button>
                                   <AddToPlaylist session={session} track={track} />
                                 </div>
                               </div>
@@ -640,6 +849,7 @@ export default function Profile({ session, player }) {
                             player.playTrack(track)
                           }
                         }
+                        const trackIsLiked = isPublicTrackLiked(track.id)
                         return (
                           <div key={track.id} className="bg-gray-800 bg-opacity-80 p-4 rounded text-white flex gap-4">
                             <img
@@ -663,7 +873,7 @@ export default function Profile({ session, player }) {
                                   </span>
                                 </div>
                               </div>
-                              <div className="shrink-0 min-w-[200px] flex items-center gap-2 mt-3 md:mt-0">
+                              <div className="shrink-0 min-w-[200px] flex items-center gap-2 mt-3 md:mt-0 flex-wrap">
                                 {canPlay ? (
                                   <>
                                     <button
@@ -683,6 +893,17 @@ export default function Profile({ session, player }) {
                                 ) : (
                                   <span className="text-red-400">Audio unavailable</span>
                                 )}
+                                <button
+                                  type="button"
+                                  onClick={() => togglePublicTrackLike(track.id)}
+                                  className={`px-2 py-1 rounded text-sm font-semibold transition ${
+                                    trackIsLiked
+                                      ? 'bg-red-500 text-white hover:bg-red-400'
+                                      : 'bg-gray-700 text-white hover:bg-gray-600'
+                                  }`}
+                                >
+                                  {trackIsLiked ? '❤️ Liked' : '🤍 Like'}
+                                </button>
                                 <AddToPlaylist session={session} track={track} />
                               </div>
                             </div>

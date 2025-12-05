@@ -80,7 +80,7 @@ export default function Upload({ session, player }) {
         .from('tracks')
         .select(`
           *,
-          genres (
+          genres(
             name,
             description
           )

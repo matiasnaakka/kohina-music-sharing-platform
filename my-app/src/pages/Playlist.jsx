@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { supabase, getPublicStorageUrl } from '../supabaseclient'
 import NavBar from '../components/NavBar'
 import AddToPlaylist from '../components/AddToPlaylist'
+import { useLikesV2 } from '../hooks/useLikesV2'
 
 export default function Playlist({ session, player }) {
   const location = useLocation()
@@ -15,6 +16,7 @@ export default function Playlist({ session, player }) {
   const [error, setError] = useState(null)
   const [isOwner, setIsOwner] = useState(false)
   const [removing, setRemoving] = useState(null)
+  const { isLiked, toggleLike, fetchLikedTracks } = useLikesV2(session?.user?.id)
 
   useEffect(() => {
     if (!playlistId) {
@@ -24,6 +26,13 @@ export default function Playlist({ session, player }) {
     }
     fetchPlaylist()
   }, [playlistId, session?.user?.id])
+
+  useEffect(() => {
+    const trackIds = tracks.map(t => t.id)
+    if (trackIds.length > 0) {
+      fetchLikedTracks(trackIds)
+    }
+  }, [tracks, fetchLikedTracks])
 
   const fetchPlaylist = async () => {
     setLoading(true)
@@ -66,8 +75,7 @@ export default function Playlist({ session, player }) {
             image_path,
             user_id,
             created_at,
-            genres (name),
-            profiles (username, avatar_url)
+            genres(name)
           )
         `)
         .eq('playlist_id', playlistId)
@@ -191,6 +199,7 @@ export default function Playlist({ session, player }) {
                   player.playTrack(track)
                 }
               }
+              const trackIsLiked = isLiked(track.id)
               return (
                 <div key={track.id} className="bg-gray-800 p-4 rounded flex gap-4 hover:bg-gray-750 transition">
                   <img
@@ -207,7 +216,7 @@ export default function Playlist({ session, player }) {
                         {track.genres ? track.genres.name : 'No genre'} • Added {formatDate(track.addedAt)}
                       </p>
                     </div>
-                    <div className="flex items-center gap-2 md:justify-end">
+                    <div className="flex items-center gap-2 md:justify-end flex-wrap">
                       {canPlay ? (
                         <>
                           <button
@@ -227,6 +236,17 @@ export default function Playlist({ session, player }) {
                       ) : (
                         <span className="text-red-400 text-sm">Audio unavailable</span>
                       )}
+                      <button
+                        type="button"
+                        onClick={() => toggleLike(track.id)}
+                        className={`px-2 py-1 rounded text-xs font-semibold transition ${
+                          trackIsLiked
+                            ? 'bg-red-500 text-white hover:bg-red-400'
+                            : 'bg-gray-700 text-white hover:bg-gray-600'
+                        }`}
+                      >
+                        {trackIsLiked ? '❤️' : '🤍'}
+                      </button>
                       {isOwner && (
                         <button
                           type="button"

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { supabase, getPublicStorageUrl } from '../supabaseclient'
 import NavBar from '../components/NavBar'
 import AddToPlaylist from '../components/AddToPlaylist'
+import { useLikesV2 } from '../hooks/useLikesV2'
 
 export default function Home({ session, player }) {
   const [tracks, setTracks] = useState([])
@@ -16,6 +17,7 @@ export default function Home({ session, player }) {
   const [ownPlaylists, setOwnPlaylists] = useState([])
   const [ownPlaylistsLoading, setOwnPlaylistsLoading] = useState(false)
   const [ownPlaylistsError, setOwnPlaylistsError] = useState(null)
+  const { isLiked, toggleLike, loading: likesLoading, fetchLikedTracks } = useLikesV2(session?.user?.id)
 
   // Fetch tracks and genres on component mount
   useEffect(() => {
@@ -74,8 +76,8 @@ export default function Home({ session, player }) {
         .from('tracks')
         .select(`
           *,
-          profiles (username, avatar_url),
-          genres (name)
+          profiles!tracks_user_id_fkey(username, avatar_url),
+          genres(name)
         `)
         .eq('is_public', true)
         .is('deleted_at', null)
@@ -147,6 +149,14 @@ export default function Home({ session, player }) {
       day: 'numeric' 
     })
   }
+
+  // Fetch liked tracks when tracks load
+  useEffect(() => {
+    const trackIds = tracks.map(t => t.id)
+    if (trackIds.length > 0) {
+      fetchLikedTracks(trackIds)
+    }
+  }, [tracks, fetchLikedTracks])
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -287,6 +297,10 @@ export default function Home({ session, player }) {
                   player.playTrack(track)
                 }
               }
+              const trackIsLiked = isLiked(track.id)
+              const handleLikeClick = async () => {
+                await toggleLike(track.id)
+              }
               return (
                 <div key={track.id} className="bg-gray-800 bg-opacity-80 p-4 rounded shadow-lg text-white flex gap-4">
                   <img
@@ -328,7 +342,7 @@ export default function Home({ session, player }) {
                       </div>
                     </div>
                     
-                    <div className="shrink-0 min-w-[200px] flex items-center gap-2">
+                    <div className="shrink-0 min-w-[200px] flex items-center gap-2 flex-wrap">
                       {canPlay ? (
                         <>
                           <button
@@ -348,6 +362,18 @@ export default function Home({ session, player }) {
                       ) : (
                         <span className="text-red-400">Audio unavailable</span>
                       )}
+                      <button
+                        type="button"
+                        onClick={handleLikeClick}
+                        disabled={likesLoading}
+                        className={`px-2 py-1 rounded text-sm font-semibold transition ${
+                          trackIsLiked
+                            ? 'bg-red-500 text-white hover:bg-red-400'
+                            : 'bg-gray-700 text-white hover:bg-gray-600'
+                        } disabled:opacity-60`}
+                      >
+                        {trackIsLiked ? '❤️ Liked' : '🤍 Like'}
+                      </button>
                       <AddToPlaylist session={session} track={track} />
                     </div>
                   </div>
