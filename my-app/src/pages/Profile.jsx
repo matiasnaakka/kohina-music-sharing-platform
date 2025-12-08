@@ -497,115 +497,6 @@ export default function Profile({ session, player }) {
                   </div>
                 </div>
 
-                {/* Liked Tracks Section */}
-                <h3 className="text-2xl font-bold mb-4">Liked Tracks</h3>
-                <div className="mb-8">
-                  {likedTracksLoading ? (
-                    <div className="text-gray-300">Loading liked tracks...</div>
-                  ) : likedTracksError ? (
-                    <div className="bg-red-500 bg-opacity-25 text-red-100 p-3 rounded">
-                      {likedTracksError}
-                    </div>
-                  ) : likedTracks.length === 0 ? (
-                    <div className="text-gray-300 bg-gray-800 p-4 rounded">
-                      You haven't liked any tracks yet.
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-1 gap-4">
-                      {likedTracks.map((track) => {
-                        const coverSrc =
-                          getPublicStorageUrl('track-images', track.image_path) ||
-                          track.profiles?.avatar_url ||
-                          '/default-avatar.png'
-                        const isActive = player?.currentTrack?.id === track.id
-                        const isBusy = isActive && player?.loading
-                        const canPlay = Boolean(track.audio_path)
-                        const playbackLabel = isActive
-                          ? isBusy
-                            ? 'Loading...'
-                            : player?.isPlaying
-                              ? 'Pause'
-                              : 'Resume'
-                          : 'Play'
-                        const handlePlayback = () => {
-                          if (!player || !canPlay) return
-                          if (isActive) {
-                            player.isPlaying ? player.pause() : player.resume()
-                          } else {
-                            player.playTrack(track)
-                          }
-                        }
-                        const trackIsLiked = isLikedTrackLiked(track.id)
-                        return (
-                          <div key={track.id} className="bg-gray-800 bg-opacity-80 p-4 rounded text-white flex gap-4">
-                            <img
-                              src={coverSrc}
-                              alt={`${track.title} cover`}
-                              className="w-24 h-24 object-cover rounded"
-                              onError={(e) => { e.target.src = track.profiles?.avatar_url || '/default-avatar.png' }}
-                            />
-                            <div className="flex flex-col md:flex-row justify-between flex-1">
-                              <div>
-                                <h4 className="font-bold text-lg">{track.title}</h4>
-                                <p className="text-gray-300">
-                                  {track.artist} {track.album ? `• ${track.album}` : ''}
-                                </p>
-                                <div className="flex gap-2 items-center mt-1">
-                                  <span className="bg-gray-700 px-2 py-0.5 text-xs rounded">
-                                    {track.genres ? track.genres.name : 'No genre'}
-                                  </span>
-                                  <span className="text-xs text-gray-400">
-                                    By{' '}
-                                    <Link
-                                      to={`/profile?user=${track.user_id}`}
-                                      className="underline hover:text-teal-300"
-                                    >
-                                      {track.profiles?.username || 'Anonymous'}
-                                    </Link>
-                                  </span>
-                                </div>
-                              </div>
-                              <div className="shrink-0 min-w-[200px] flex items-center gap-2 mt-3 md:mt-0 flex-wrap">
-                                {canPlay ? (
-                                  <>
-                                    <button
-                                      type="button"
-                                      onClick={handlePlayback}
-                                      disabled={isBusy}
-                                      className="bg-teal-500 text-black px-3 py-1 rounded text-sm font-semibold hover:bg-teal-400 disabled:opacity-60"
-                                    >
-                                      {playbackLabel}
-                                    </button>
-                                    {isActive && player?.error && !player.loading && (
-                                      <span className="max-w-[140px] truncate text-xs text-red-400">
-                                        {player.error}
-                                      </span>
-                                    )}
-                                  </>
-                                ) : (
-                                  <span className="text-red-400">Audio unavailable</span>
-                                )}
-                                <button
-                                  type="button"
-                                  onClick={() => toggleLikedTrackLike(track.id)}
-                                  className={`px-2 py-1 rounded text-sm font-semibold transition ${
-                                    trackIsLiked
-                                      ? 'bg-red-500 text-white hover:bg-red-400'
-                                      : 'bg-gray-700 text-white hover:bg-gray-600'
-                                  }`}
-                                >
-                                  {trackIsLiked ? '❤️ Liked' : '🤍 Like'}
-                                </button>
-                                <AddToPlaylist session={session} track={track} />
-                              </div>
-                            </div>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  )}
-                </div>
-
                 <h3 className="text-2xl font-bold mb-4">Tracks</h3>
                 <div className="flex flex-col lg:flex-row gap-6">
                   <div className="flex-1">
@@ -711,35 +602,126 @@ export default function Profile({ session, player }) {
                       </div>
                     )}
                   </div>
-                  <aside className="lg:w-72 bg-gray-900 bg-opacity-80 p-4 rounded">
-                    <h4 className="text-xl font-semibold mb-3">Public playlists</h4>
-                    {ownPlaylistsLoading ? (
-                      <div className="text-gray-400 text-sm">Loading playlists...</div>
-                    ) : ownPlaylistsError ? (
-                      <div className="text-red-400 text-sm">{ownPlaylistsError}</div>
-                    ) : ownPlaylists.length === 0 ? (
-                      <div className="text-gray-400 text-sm">No public playlists yet.</div>
-                    ) : (
-                      <ul className="space-y-3 text-sm">
-                        {ownPlaylists.map((playlist) => (
-                          <li key={playlist.id}>
-                            <Link
-                              to={`/playlist?id=${playlist.id}`}
-                              className="block bg-gray-800 hover:bg-gray-700 px-3 py-2 rounded transition"
-                            >
-                              <p className="text-white font-semibold">{playlist.title}</p>
-                              {playlist.description && (
-                                <p className="text-gray-400 text-xs mt-1 line-clamp-2">{playlist.description}</p>
-                              )}
-                              <p className="text-gray-500 text-xs mt-1">
-                                Updated {new Date(playlist.updated_at).toLocaleDateString()}
-                              </p>
-                            </Link>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </aside>
+                  <div className="lg:w-72 space-y-6">
+                    {/* Public Playlists Sidebar */}
+                    <aside className="bg-gray-900 bg-opacity-80 p-4 rounded">
+                      <h4 className="text-xl font-semibold mb-3">Public playlists</h4>
+                      {ownPlaylistsLoading ? (
+                        <div className="text-gray-400 text-sm">Loading playlists...</div>
+                      ) : ownPlaylistsError ? (
+                        <div className="text-red-400 text-sm">{ownPlaylistsError}</div>
+                      ) : ownPlaylists.length === 0 ? (
+                        <div className="text-gray-400 text-sm">No public playlists yet.</div>
+                      ) : (
+                        <ul className="space-y-3 text-sm">
+                          {ownPlaylists.map((playlist) => (
+                            <li key={playlist.id}>
+                              <Link
+                                to={`/playlist?id=${playlist.id}`}
+                                className="block bg-gray-800 hover:bg-gray-700 px-3 py-2 rounded transition"
+                              >
+                                <p className="text-white font-semibold">{playlist.title}</p>
+                                {playlist.description && (
+                                  <p className="text-gray-400 text-xs mt-1 line-clamp-2">{playlist.description}</p>
+                                )}
+                                <p className="text-gray-500 text-xs mt-1">
+                                  Updated {new Date(playlist.updated_at).toLocaleDateString()}
+                                </p>
+                              </Link>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </aside>
+
+                    {/* Liked Tracks Sidebar */}
+                    <aside className="bg-gray-900 bg-opacity-80 p-4 rounded">
+                      <h4 className="text-xl font-semibold mb-3">Liked Tracks</h4>
+                      {likedTracksLoading ? (
+                        <div className="text-gray-400 text-sm">Loading...</div>
+                      ) : likedTracksError ? (
+                        <div className="text-red-400 text-sm">{likedTracksError}</div>
+                      ) : likedTracks.length === 0 ? (
+                        <div className="text-gray-400 text-sm">No liked tracks yet.</div>
+                      ) : (
+                        <div className="max-h-96 overflow-y-auto space-y-2">
+                          {likedTracks.map((track) => {
+                            const coverSrc =
+                              getPublicStorageUrl('track-images', track.image_path) ||
+                              track.profiles?.avatar_url ||
+                              '/default-avatar.png'
+                            const isActive = player?.currentTrack?.id === track.id
+                            const isBusy = isActive && player?.loading
+                            const canPlay = Boolean(track.audio_path)
+                            const playbackLabel = isActive
+                              ? isBusy
+                                ? 'Loading...'
+                                : player?.isPlaying
+                                  ? 'Pause'
+                                  : 'Resume'
+                              : 'Play'
+                            const handlePlayback = () => {
+                              if (!player || !canPlay) return
+                              if (isActive) {
+                                player.isPlaying ? player.pause() : player.resume()
+                              } else {
+                                player.playTrack(track)
+                              }
+                            }
+                            const trackIsLiked = isLikedTrackLiked(track.id)
+                            return (
+                              <div key={track.id} className="bg-gray-800 bg-opacity-60 p-2 rounded hover:bg-opacity-80 transition text-xs">
+                                <div className="flex gap-2 mb-1">
+                                  <img
+                                    src={coverSrc}
+                                    alt={`${track.title} cover`}
+                                    className="w-12 h-12 object-cover rounded shrink-0"
+                                    onError={(e) => { e.target.src = track.profiles?.avatar_url || '/default-avatar.png' }}
+                                  />
+                                  <div className="min-w-0 flex-1">
+                                    <h5 className="font-semibold truncate">{track.title}</h5>
+                                    <p className="text-gray-400 truncate">{track.artist}</p>
+                                    <Link
+                                      to={`/profile?user=${track.user_id}`}
+                                      className="text-gray-500 hover:text-teal-300 truncate text-xs underline"
+                                    >
+                                      {track.profiles?.username || 'Anonymous'}
+                                    </Link>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-1 flex-wrap">
+                                  {canPlay ? (
+                                    <button
+                                      type="button"
+                                      onClick={handlePlayback}
+                                      disabled={isBusy}
+                                      className="bg-teal-500 text-black px-1.5 py-0.5 rounded text-xs font-semibold hover:bg-teal-400 disabled:opacity-60"
+                                    >
+                                      {playbackLabel}
+                                    </button>
+                                  ) : (
+                                    <span className="text-red-400 text-xs">No audio</span>
+                                  )}
+                                  <button
+                                    type="button"
+                                    onClick={() => toggleLikedTrackLike(track.id)}
+                                    className={`px-1 py-0.5 rounded text-xs transition ${
+                                      trackIsLiked
+                                        ? 'bg-red-500 text-white hover:bg-red-400'
+                                        : 'bg-gray-700 text-white hover:bg-gray-600'
+                                    }`}
+                                  >
+                                    {trackIsLiked ? '❤️' : '🤍'}
+                                  </button>
+                                  <AddToPlaylist session={session} track={track} />
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      )}
+                    </aside>
+                  </div>
                 </div>
               </>
             )}
@@ -913,35 +895,126 @@ export default function Profile({ session, player }) {
                     </div>
                   )}
                 </div>
-                <aside className="lg:w-72 bg-gray-900 bg-opacity-80 p-4 rounded">
-                  <h4 className="text-xl font-semibold mb-3">Public playlists</h4>
-                  {publicPlaylistsLoading ? (
-                    <div className="text-gray-400 text-sm">Loading playlists...</div>
-                  ) : publicPlaylistsError ? (
-                    <div className="text-red-400 text-sm">{publicPlaylistsError}</div>
-                  ) : publicPlaylists.length === 0 ? (
-                    <div className="text-gray-400 text-sm">No public playlists yet.</div>
-                  ) : (
-                    <ul className="space-y-3 text-sm">
-                      {publicPlaylists.map((playlist) => (
-                        <li key={playlist.id}>
-                          <Link
-                            to={`/playlist?id=${playlist.id}`}
-                            className="block bg-gray-800 hover:bg-gray-700 px-3 py-2 rounded transition"
-                          >
-                            <p className="text-white font-semibold">{playlist.title}</p>
-                            {playlist.description && (
-                              <p className="text-gray-400 text-xs mt-1 line-clamp-2">{playlist.description}</p>
-                            )}
-                            <p className="text-gray-500 text-xs mt-1">
-                              Updated {new Date(playlist.updated_at).toLocaleDateString()}
-                            </p>
-                          </Link>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </aside>
+                <div className="lg:w-72 space-y-6">
+                  {/* Public Playlists Sidebar */}
+                  <aside className="bg-gray-900 bg-opacity-80 p-4 rounded">
+                    <h4 className="text-xl font-semibold mb-3">Public playlists</h4>
+                    {publicPlaylistsLoading ? (
+                      <div className="text-gray-400 text-sm">Loading playlists...</div>
+                    ) : publicPlaylistsError ? (
+                      <div className="text-red-400 text-sm">{publicPlaylistsError}</div>
+                    ) : publicPlaylists.length === 0 ? (
+                      <div className="text-gray-400 text-sm">No public playlists yet.</div>
+                    ) : (
+                      <ul className="space-y-3 text-sm">
+                        {publicPlaylists.map((playlist) => (
+                          <li key={playlist.id}>
+                            <Link
+                              to={`/playlist?id=${playlist.id}`}
+                              className="block bg-gray-800 hover:bg-gray-700 px-3 py-2 rounded transition"
+                            >
+                              <p className="text-white font-semibold">{playlist.title}</p>
+                              {playlist.description && (
+                                <p className="text-gray-400 text-xs mt-1 line-clamp-2">{playlist.description}</p>
+                              )}
+                              <p className="text-gray-500 text-xs mt-1">
+                                Updated {new Date(playlist.updated_at).toLocaleDateString()}
+                              </p>
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </aside>
+
+                  {/* Liked Tracks Sidebar */}
+                  <aside className="bg-gray-900 bg-opacity-80 p-4 rounded">
+                    <h4 className="text-xl font-semibold mb-3">Liked Tracks</h4>
+                    {likedTracksLoading ? (
+                      <div className="text-gray-400 text-sm">Loading...</div>
+                    ) : likedTracksError ? (
+                      <div className="text-red-400 text-sm">{likedTracksError}</div>
+                    ) : likedTracks.length === 0 ? (
+                      <div className="text-gray-400 text-sm">No liked tracks yet.</div>
+                    ) : (
+                      <div className="max-h-96 overflow-y-auto space-y-2">
+                        {likedTracks.map((track) => {
+                          const coverSrc =
+                            getPublicStorageUrl('track-images', track.image_path) ||
+                            track.profiles?.avatar_url ||
+                            '/default-avatar.png'
+                          const isActive = player?.currentTrack?.id === track.id
+                          const isBusy = isActive && player?.loading
+                          const canPlay = Boolean(track.audio_path)
+                          const playbackLabel = isActive
+                            ? isBusy
+                              ? 'Loading...'
+                              : player?.isPlaying
+                                ? 'Pause'
+                                : 'Resume'
+                            : 'Play'
+                          const handlePlayback = () => {
+                            if (!player || !canPlay) return
+                            if (isActive) {
+                              player.isPlaying ? player.pause() : player.resume()
+                            } else {
+                              player.playTrack(track)
+                            }
+                          }
+                          const trackIsLiked = isLikedTrackLiked(track.id)
+                          return (
+                            <div key={track.id} className="bg-gray-800 bg-opacity-60 p-2 rounded hover:bg-opacity-80 transition text-xs">
+                              <div className="flex gap-2 mb-1">
+                                <img
+                                  src={coverSrc}
+                                  alt={`${track.title} cover`}
+                                  className="w-12 h-12 object-cover rounded shrink-0"
+                                  onError={(e) => { e.target.src = track.profiles?.avatar_url || '/default-avatar.png' }}
+                                />
+                                <div className="min-w-0 flex-1">
+                                  <h5 className="font-semibold truncate">{track.title}</h5>
+                                  <p className="text-gray-400 truncate">{track.artist}</p>
+                                  <Link
+                                    to={`/profile?user=${track.user_id}`}
+                                    className="text-gray-500 hover:text-teal-300 truncate text-xs underline"
+                                  >
+                                    {track.profiles?.username || 'Anonymous'}
+                                  </Link>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-1 flex-wrap">
+                                {canPlay ? (
+                                  <button
+                                    type="button"
+                                    onClick={handlePlayback}
+                                    disabled={isBusy}
+                                    className="bg-teal-500 text-black px-1.5 py-0.5 rounded text-xs font-semibold hover:bg-teal-400 disabled:opacity-60"
+                                  >
+                                    {playbackLabel}
+                                  </button>
+                                ) : (
+                                  <span className="text-red-400 text-xs">No audio</span>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={() => toggleLikedTrackLike(track.id)}
+                                  className={`px-1 py-0.5 rounded text-xs transition ${
+                                    trackIsLiked
+                                      ? 'bg-red-500 text-white hover:bg-red-400'
+                                      : 'bg-gray-700 text-white hover:bg-gray-600'
+                                  }`}
+                                >
+                                  {trackIsLiked ? '❤️' : '🤍'}
+                                </button>
+                                <AddToPlaylist session={session} track={track} />
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </aside>
+                </div>
               </div>
             </>
           )}
