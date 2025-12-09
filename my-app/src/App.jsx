@@ -1,6 +1,7 @@
 import { useState, useMemo, useRef, useCallback, useEffect } from 'react'
 import Routing from './Router'
 import { supabase, getPublicStorageUrl } from './supabaseclient'
+import { useIncrementPlayCount } from './hooks/useIncrementPlayCount'
 
 /*
   App.jsx
@@ -207,6 +208,74 @@ const App = () => {
 // GlobalAudioPlayer component renders the bottom player UI
 const GlobalAudioPlayer = ({ audioRef, playerState, pause, resume, stop }) => {
   const { track, isPlaying, loading, error } = playerState
+  const { increment: incrementPlayCount } = useIncrementPlayCount()
+  const timerRef = useRef(null)
+
+  const THRESHOLD_MS = 5000 // 5 seconds continuous playback
+  const COOLDOWN_MS = 30 * 60 * 1000 // 30 minutes
+
+  useEffect(() => {
+    const audio = audioRef.current
+    if (!audio || !track?.id) return
+
+    const sessionKey = `played:${track.id}`
+
+    const startTimer = () => {
+      // Skip if recently incremented
+      try {
+        const last = sessionStorage.getItem(sessionKey)
+        if (last && Date.now() - Number(last) < COOLDOWN_MS) return
+      } catch (err) {
+        // Ignore sessionStorage errors
+      }
+
+      // Clear any existing timer
+      if (timerRef.current) {
+        clearTimeout(timerRef.current)
+      }
+
+      timerRef.current = setTimeout(async () => {
+        try {
+          await incrementPlayCount(track.id)
+          // Mark as incremented in sessionStorage
+          try {
+            sessionStorage.setItem(sessionKey, String(Date.now()))
+          } catch (err) {
+            // Ignore storage errors
+          }
+        } catch (err) {
+          // Non-blocking failure; optionally report to analytics
+          console.error('Failed to increment play count', err)
+        }
+      }, THRESHOLD_MS)
+    }
+
+    const clearTimer = () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current)
+        timerRef.current = null
+      }
+    }
+
+    // Start timer on play, clear it on pause/seek/ended
+    audio.addEventListener('play', startTimer)
+    audio.addEventListener('playing', startTimer)
+    audio.addEventListener('pause', clearTimer)
+    audio.addEventListener('seeking', clearTimer)
+    audio.addEventListener('ended', clearTimer)
+    audio.addEventListener('stalled', clearTimer)
+
+    return () => {
+      clearTimer()
+      audio.removeEventListener('play', startTimer)
+      audio.removeEventListener('playing', startTimer)
+      audio.removeEventListener('pause', clearTimer)
+      audio.removeEventListener('seeking', clearTimer)
+      audio.removeEventListener('ended', clearTimer)
+      audio.removeEventListener('stalled', clearTimer)
+    }
+  }, [track?.id, incrementPlayCount])
+
   if (!track) return null
 
   const coverSrc = track.image_path ? getPublicStorageUrl('track-images', track.image_path) : null
