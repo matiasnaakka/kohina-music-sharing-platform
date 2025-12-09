@@ -75,6 +75,7 @@ export default function Playlist({ session, player }) {
             image_path,
             user_id,
             created_at,
+            play_count,
             genres(name)
           )
         `)
