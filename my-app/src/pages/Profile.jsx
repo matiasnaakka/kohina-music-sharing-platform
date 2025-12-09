@@ -93,7 +93,7 @@ export default function Profile({ session, player }) {
         const { data: tracksData, error: tracksError } = await supabase
           .from('tracks')
           .select(`
-            id, title, artist, album, audio_path, created_at, image_path,
+            id, title, artist, album, audio_path, created_at, image_path, play_count,
             genres(name)
           `)
           .eq('user_id', targetUserId)
@@ -187,7 +187,7 @@ export default function Profile({ session, player }) {
         const { data, error } = await supabase
           .from('tracks')
           .select(`
-            id, title, artist, album, audio_path, created_at, is_public, image_path,
+            id, title, artist, album, audio_path, created_at, is_public, image_path, play_count,
             genres(name)
           `)
           .eq('user_id', session.user.id)
