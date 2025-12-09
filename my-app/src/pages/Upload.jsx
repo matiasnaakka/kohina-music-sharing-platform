@@ -540,6 +540,7 @@ export default function Upload({ session, player }) {
                         {track.genres ? track.genres.name : 'No genre'} • {track.is_public ? 'Public' : 'Private'}
                         {track.mime_type && ` • ${track.mime_type.split('/')[1]}`}
                         {track.file_size && ` • ${Math.round(track.file_size / 1024)} KB`}
+                        • 🎵 {track.play_count || 0} plays
                       </p>
                       {!track.audio_path && <p className="text-red-400 text-sm">Audio path missing</p>}
                     </div>

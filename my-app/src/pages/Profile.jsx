@@ -560,6 +560,9 @@ export default function Profile({ session, player }) {
                                     <span className="text-xs text-gray-400">
                                       {formatDate(track.created_at)}
                                     </span>
+                                    <span className="text-xs text-gray-500">
+                                      • 🎵 {track.play_count || 0} plays
+                                    </span>
                                   </div>
                                 </div>
                                 <div className="shrink-0 min-w-[200px] flex items-center gap-2 mt-3 md:mt-0 flex-wrap">
@@ -852,6 +855,9 @@ export default function Profile({ session, player }) {
                                   </span>
                                   <span className="text-xs text-gray-400">
                                     {formatDate(track.created_at)}
+                                  </span>
+                                  <span className="text-xs text-gray-500">
+                                    • 🎵 {track.play_count || 0} plays
                                   </span>
                                 </div>
                               </div>

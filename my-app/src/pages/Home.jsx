@@ -339,6 +339,9 @@ export default function Home({ session, player }) {
                           </Link>
                           {' '}• {formatDate(track.created_at)}
                         </span>
+                        <span className="text-xs text-gray-500">
+                          • 🎵 {track.play_count || 0} plays
+                        </span>
                       </div>
                     </div>
                     

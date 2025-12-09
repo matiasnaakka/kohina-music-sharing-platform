@@ -20,7 +20,27 @@ const initialPlayerState = {
 
 const App = () => {
   const [playerState, setPlayerState] = useState(initialPlayerState)
+  const [session, setSession] = useState(null)
   const audioRef = useRef(null)
+
+  // Fetch current session on mount
+  useEffect(() => {
+    const getSession = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+      setSession(session)
+    }
+
+    getSession()
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session)
+    })
+
+    return () => subscription?.unsubscribe()
+  }, [])
 
   /**
    * playTrack
@@ -28,7 +48,6 @@ const App = () => {
    */
   const playTrack = useCallback(async (track) => {
     if (!track?.audio_path) {
-      // Fixed typo: setPlayerState (previously setPlayesrState) to avoid reference errors
       setPlayerState({
         track,
         signedUrl: null,
@@ -75,7 +94,6 @@ const App = () => {
     const audio = audioRef.current
     if (!audio) return
     audio.pause()
-    // Ensure UI state is updated immediately
     setPlayerState((prev) => ({
       ...prev,
       isPlaying: false,
@@ -87,12 +105,10 @@ const App = () => {
   const resume = useCallback(() => {
     const audio = audioRef.current
     if (!audio) return
-    // Mark loading while attempting to resume
     setPlayerState((prev) => ({ ...prev, loading: true, error: null }))
     audio
       .play()
       .then(() => {
-        // On successful play, update state to playing
         setPlayerState((prev) => ({
           ...prev,
           isPlaying: true,
@@ -200,13 +216,14 @@ const App = () => {
         pause={pause}
         resume={resume}
         stop={stop}
+        session={session}
       />
     </>
   )
 }
 
 // GlobalAudioPlayer component renders the bottom player UI
-const GlobalAudioPlayer = ({ audioRef, playerState, pause, resume, stop }) => {
+const GlobalAudioPlayer = ({ audioRef, playerState, pause, resume, stop, session }) => {
   const { track, isPlaying, loading, error } = playerState
   const { increment: incrementPlayCount } = useIncrementPlayCount()
   const timerRef = useRef(null)
@@ -218,34 +235,63 @@ const GlobalAudioPlayer = ({ audioRef, playerState, pause, resume, stop }) => {
     const audio = audioRef.current
     if (!audio || !track?.id) return
 
-    const sessionKey = `played:${track.id}`
+    // Include user ID in the session key so each user has their own cooldown per track
+    const sessionKey = `played:${track.id}:${session?.user?.id || 'anonymous'}`
 
     const startTimer = () => {
+      console.log('[GlobalAudioPlayer] startTimer called for track:', track?.id, 'user:', session?.user?.id)
+
       // Skip if recently incremented
       try {
         const last = sessionStorage.getItem(sessionKey)
-        if (last && Date.now() - Number(last) < COOLDOWN_MS) return
+        const now = Date.now()
+        const timeSinceLast = last ? now - Number(last) : null
+        const cooldownRemaining = last ? COOLDOWN_MS - timeSinceLast : 0
+
+        console.log('[GlobalAudioPlayer] Cooldown check:', {
+          sessionKey,
+          lastIncrement: last ? new Date(Number(last)).toISOString() : 'never',
+          timeSinceLast: timeSinceLast ? `${(timeSinceLast / 1000 / 60).toFixed(1)} min ago` : 'never',
+          cooldownRemaining: cooldownRemaining > 0 ? `${(cooldownRemaining / 1000 / 60).toFixed(1)} min remaining` : 'expired',
+        })
+
+        if (last && timeSinceLast < COOLDOWN_MS) {
+          console.log(`[GlobalAudioPlayer] ⏳ Skipping: cooldown active (${(cooldownRemaining / 1000 / 60).toFixed(1)} min remaining)`)
+          return
+        }
       } catch (err) {
-        // Ignore sessionStorage errors
+        console.warn('[GlobalAudioPlayer] sessionStorage check failed:', err)
       }
 
       // Clear any existing timer
       if (timerRef.current) {
+        console.log('[GlobalAudioPlayer] Clearing existing timer')
         clearTimeout(timerRef.current)
       }
 
+      console.log(`[GlobalAudioPlayer] ⏱️ Setting new timer for ${THRESHOLD_MS / 1000} seconds`)
       timerRef.current = setTimeout(async () => {
+        console.log('[GlobalAudioPlayer] 5-second threshold reached for track:', track.id)
         try {
+          console.log('[GlobalAudioPlayer] Calling incrementPlayCount for track:', track.id)
           await incrementPlayCount(track.id)
+          console.log('[GlobalAudioPlayer] ✅ incrementPlayCount succeeded')
+
           // Mark as incremented in sessionStorage
           try {
-            sessionStorage.setItem(sessionKey, String(Date.now()))
+            const now = Date.now()
+            sessionStorage.setItem(sessionKey, String(now))
+            console.log('[GlobalAudioPlayer] 📌 Stored cooldown marker:', {
+              key: sessionKey,
+              timestamp: new Date(now).toISOString(),
+              cooldownUntil: new Date(now + COOLDOWN_MS).toISOString(),
+            })
           } catch (err) {
-            // Ignore storage errors
+            console.warn('[GlobalAudioPlayer] Could not store cooldown marker:', err)
           }
         } catch (err) {
           // Non-blocking failure; optionally report to analytics
-          console.error('Failed to increment play count', err)
+          console.error('[GlobalAudioPlayer] ❌ Failed to increment play count:', err)
         }
       }, THRESHOLD_MS)
     }
@@ -274,7 +320,7 @@ const GlobalAudioPlayer = ({ audioRef, playerState, pause, resume, stop }) => {
       audio.removeEventListener('ended', clearTimer)
       audio.removeEventListener('stalled', clearTimer)
     }
-  }, [track?.id, incrementPlayCount])
+  }, [track?.id, incrementPlayCount, session?.user?.id])
 
   if (!track) return null
 

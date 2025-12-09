@@ -213,7 +213,7 @@ export default function Playlist({ session, player }) {
                       <h3 className="font-bold text-lg">{track.title}</h3>
                       <p className="text-gray-300">{track.artist} {track.album ? `• ${track.album}` : ''}</p>
                       <p className="text-xs text-gray-400 mt-1">
-                        {track.genres ? track.genres.name : 'No genre'} • Added {formatDate(track.addedAt)}
+                        {track.genres ? track.genres.name : 'No genre'} • Added {formatDate(track.addedAt)} • 🎵 {track.play_count || 0} plays
                       </p>
                     </div>
                     <div className="flex items-center gap-2 md:justify-end flex-wrap">
