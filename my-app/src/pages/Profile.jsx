@@ -388,6 +388,7 @@ export default function Profile({ session, player }) {
               created_at,
               image_path,
               user_id,
+              play_count,
               genres (name),
               profiles!tracks_user_id_fkey(username, avatar_url)
             )
@@ -690,6 +691,9 @@ export default function Profile({ session, player }) {
                                     >
                                       {track.profiles?.username || 'Anonymous'}
                                     </Link>
+                                    <p className="text-gray-500 text-xs mt-1">
+                                      🎵 {track.play_count || 0} plays
+                                    </p>
                                   </div>
                                 </div>
                                 <div className="flex items-center gap-1 flex-wrap">
@@ -986,6 +990,9 @@ export default function Profile({ session, player }) {
                                   >
                                     {track.profiles?.username || 'Anonymous'}
                                   </Link>
+                                  <p className="text-gray-500 text-xs mt-1">
+                                    🎵 {track.play_count || 0} plays
+                                  </p>
                                 </div>
                               </div>
                               <div className="flex items-center gap-1 flex-wrap">
