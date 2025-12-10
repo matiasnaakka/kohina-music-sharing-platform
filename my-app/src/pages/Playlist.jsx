@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { supabase, getPublicStorageUrl } from '../supabaseclient'
 import NavBar from '../components/NavBar'
 import AddToPlaylist from '../components/AddToPlaylist'
+import TrackComments from '../components/TrackComments'
 import { useLikesV2 } from '../hooks/useLikesV2'
 
 export default function Playlist({ session, player }) {
@@ -16,6 +17,7 @@ export default function Playlist({ session, player }) {
   const [error, setError] = useState(null)
   const [isOwner, setIsOwner] = useState(false)
   const [removing, setRemoving] = useState(null)
+  const [expandedComments, setExpandedComments] = useState(null)
   const { isLiked, toggleLike, fetchLikedTracks } = useLikesV2(session?.user?.id)
 
   useEffect(() => {
@@ -202,64 +204,82 @@ export default function Playlist({ session, player }) {
               }
               const trackIsLiked = isLiked(track.id)
               return (
-                <div key={track.id} className="bg-gray-800 p-4 rounded flex gap-4 hover:bg-gray-750 transition">
-                  <img
-                    src={coverSrc}
-                    alt={`${track.title} cover`}
-                    className="w-20 h-20 object-cover rounded"
-                    onError={(e) => { e.target.src = track.profiles?.avatar_url || '/default-avatar.png' }}
-                  />
-                  <div className="flex flex-col md:flex-row justify-between flex-1 gap-2">
-                    <div>
-                      <h3 className="font-bold text-lg">{track.title}</h3>
-                      <p className="text-gray-300">{track.artist} {track.album ? `• ${track.album}` : ''}</p>
-                      <p className="text-xs text-gray-400 mt-1">
-                        {track.genres ? track.genres.name : 'No genre'} • Added {formatDate(track.addedAt)} • 🎵 {track.play_count || 0} plays
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2 md:justify-end flex-wrap">
-                      {canPlay ? (
-                        <>
-                          <button
-                            type="button"
-                            onClick={handlePlayback}
-                            disabled={isBusy}
-                            className="bg-teal-500 text-black px-3 py-1 rounded text-sm font-semibold hover:bg-teal-400 disabled:opacity-60 whitespace-nowrap"
-                          >
-                            {playbackLabel}
-                          </button>
-                          {isActive && player?.error && !player.loading && (
-                            <span className="max-w-[140px] truncate text-xs text-red-400">
-                              {player.error}
-                            </span>
-                          )}
-                        </>
-                      ) : (
-                        <span className="text-red-400 text-sm">Audio unavailable</span>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => toggleLike(track.id)}
-                        className={`px-2 py-1 rounded text-xs font-semibold transition ${
-                          trackIsLiked
-                            ? 'bg-red-500 text-white hover:bg-red-400'
-                            : 'bg-gray-700 text-white hover:bg-gray-600'
-                        }`}
-                      >
-                        {trackIsLiked ? '❤️' : '🤍'}
-                      </button>
-                      {isOwner && (
+                <div key={track.id}>
+                  <div className="bg-gray-800 p-4 rounded flex gap-4 hover:bg-gray-750 transition">
+                    <img
+                      src={coverSrc}
+                      alt={`${track.title} cover`}
+                      className="w-20 h-20 object-cover rounded"
+                      onError={(e) => { e.target.src = track.profiles?.avatar_url || '/default-avatar.png' }}
+                    />
+                    <div className="flex flex-col md:flex-row justify-between flex-1 gap-2">
+                      <div>
+                        <h3 className="font-bold text-lg">{track.title}</h3>
+                        <p className="text-gray-300">{track.artist} {track.album ? `• ${track.album}` : ''}</p>
+                        <p className="text-xs text-gray-400 mt-1">
+                          {track.genres ? track.genres.name : 'No genre'} • Added {formatDate(track.addedAt)} • 🎵 {track.play_count || 0} plays
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 md:justify-end flex-wrap">
+                        {canPlay ? (
+                          <>
+                            <button
+                              type="button"
+                              onClick={handlePlayback}
+                              disabled={isBusy}
+                              className="bg-teal-500 text-black px-3 py-1 rounded text-sm font-semibold hover:bg-teal-400 disabled:opacity-60 whitespace-nowrap"
+                            >
+                              {playbackLabel}
+                            </button>
+                            {isActive && player?.error && !player.loading && (
+                              <span className="max-w-[140px] truncate text-xs text-red-400">
+                                {player.error}
+                              </span>
+                            )}
+                          </>
+                        ) : (
+                          <span className="text-red-400 text-sm">Audio unavailable</span>
+                        )}
                         <button
                           type="button"
-                          onClick={() => handleRemoveTrack(track.playlistTrackId)}
-                          disabled={removing === track.playlistTrackId}
-                          className="bg-red-600 text-white px-2 py-1 rounded text-xs hover:bg-red-500 disabled:opacity-60"
+                          onClick={() => toggleLike(track.id)}
+                          className={`px-2 py-1 rounded text-xs font-semibold transition ${
+                            trackIsLiked
+                              ? 'bg-red-500 text-white hover:bg-red-400'
+                              : 'bg-gray-700 text-white hover:bg-gray-600'
+                          }`}
                         >
-                          Remove
+                          {trackIsLiked ? '❤️' : '🤍'}
                         </button>
-                      )}
+                        {isOwner && (
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveTrack(track.playlistTrackId)}
+                            disabled={removing === track.playlistTrackId}
+                            className="bg-red-600 text-white px-2 py-1 rounded text-xs hover:bg-red-500 disabled:opacity-60"
+                          >
+                            Remove
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
+
+                  {/* Comments section */}
+                  {expandedComments === track.id && (
+                    <div className="bg-gray-900 p-4 rounded-b mt-0 border-t border-gray-700">
+                      <TrackComments trackId={track.id} session={session} />
+                    </div>
+                  )}
+
+                  {/* Comments toggle button */}
+                  <button
+                    type="button"
+                    onClick={() => setExpandedComments(expandedComments === track.id ? null : track.id)}
+                    className="text-xs text-blue-400 hover:underline mt-2 block"
+                  >
+                    {expandedComments === track.id ? 'Hide comments' : 'View comments'}
+                  </button>
                 </div>
               )
             })}

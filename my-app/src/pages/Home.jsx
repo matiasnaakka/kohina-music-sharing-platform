@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { supabase, getPublicStorageUrl } from '../supabaseclient'
 import NavBar from '../components/NavBar'
 import AddToPlaylist from '../components/AddToPlaylist'
+import TrackComments from '../components/TrackComments'
 import { useLikesV2 } from '../hooks/useLikesV2'
 
 export default function Home({ session, player }) {
@@ -18,6 +19,7 @@ export default function Home({ session, player }) {
   const [ownPlaylistsLoading, setOwnPlaylistsLoading] = useState(false)
   const [ownPlaylistsError, setOwnPlaylistsError] = useState(null)
   const { isLiked, toggleLike, loading: likesLoading, fetchLikedTracks } = useLikesV2(session?.user?.id)
+  const [expandedComments, setExpandedComments] = useState(null)
 
   // Fetch tracks and genres on component mount
   useEffect(() => {
@@ -302,84 +304,102 @@ export default function Home({ session, player }) {
                 await toggleLike(track.id)
               }
               return (
-                <div key={track.id} className="bg-gray-800 bg-opacity-80 p-4 rounded shadow-lg text-white flex gap-4">
-                  <img
-                    src={coverSrc}
-                    alt={`${track.title} cover`}
-                    className="w-24 h-24 object-cover rounded"
-                    onError={(e) => { e.target.src = track.profiles?.avatar_url || '/default-avatar.png' }}
-                  />
-                  <div className="flex flex-col md:flex-row justify-between flex-1">
-                    <div className="mb-3 md:mb-0">
-                      <div className="flex items-center gap-3 mb-1">
-                        {track.profiles?.avatar_url && (
-                          <img 
-                            src={track.profiles.avatar_url} 
-                            alt="User avatar"
-                            className="w-8 h-8 rounded-full object-cover"
-                            onError={(e) => e.target.src = '/default-avatar.png'}
-                          />
-                        )}
-                        <h3 className="font-bold text-lg">{track.title}</h3>
-                      </div>
-                      <p className="text-gray-300">
-                        {track.artist} {track.album ? `• ${track.album}` : ''}
-                      </p>
-                      <div className="flex gap-2 items-center mt-1">
-                        <span className="bg-gray-700 px-2 py-0.5 text-xs rounded">
-                          {track.genres ? track.genres.name : 'No genre'}
-                        </span>
-                        <span className="text-xs text-gray-400">
-                          Shared by{' '}
-                          <Link
-                            to={`/profile?user=${track.user_id}`}
-                            className="underline hover:text-teal-300"
-                          >
-                            {track.profiles?.username || 'Anonymous'}
-                          </Link>
-                          {' '}• {formatDate(track.created_at)}
-                        </span>
-                        <span className="text-xs text-gray-500">
-                          • 🎵 {track.play_count || 0} plays
-                        </span>
-                      </div>
-                    </div>
-                    
-                    <div className="shrink-0 min-w-[200px] flex items-center gap-2 flex-wrap">
-                      {canPlay ? (
-                        <>
-                          <button
-                            type="button"
-                            onClick={handlePlayback}
-                            disabled={isBusy}
-                            className="bg-teal-500 text-black px-3 py-1 rounded text-sm font-semibold hover:bg-teal-400 disabled:opacity-60"
-                          >
-                            {playbackLabel}
-                          </button>
-                          {isActive && player?.error && !player.loading && (
-                            <span className="max-w-[140px] truncate text-xs text-red-400">
-                              {player.error}
-                            </span>
+                <div key={track.id}>
+                  <div className="bg-gray-800 bg-opacity-80 p-4 rounded shadow-lg text-white flex gap-4">
+                    <img
+                      src={coverSrc}
+                      alt={`${track.title} cover`}
+                      className="w-24 h-24 object-cover rounded"
+                      onError={(e) => { e.target.src = track.profiles?.avatar_url || '/default-avatar.png' }}
+                    />
+                    <div className="flex flex-col md:flex-row justify-between flex-1">
+                      <div className="mb-3 md:mb-0">
+                        <div className="flex items-center gap-3 mb-1">
+                          {track.profiles?.avatar_url && (
+                            <img 
+                              src={track.profiles.avatar_url} 
+                              alt="User avatar"
+                              className="w-8 h-8 rounded-full object-cover"
+                              onError={(e) => e.target.src = '/default-avatar.png'}
+                            />
                           )}
-                        </>
-                      ) : (
-                        <span className="text-red-400">Audio unavailable</span>
-                      )}
-                      <button
-                        type="button"
-                        onClick={handleLikeClick}
-                        disabled={likesLoading}
-                        className={`px-2 py-1 rounded text-sm font-semibold transition ${
-                          trackIsLiked
-                            ? 'bg-red-500 text-white hover:bg-red-400'
-                            : 'bg-gray-700 text-white hover:bg-gray-600'
-                        } disabled:opacity-60`}
-                      >
-                        {trackIsLiked ? '❤️ Liked' : '🤍 Like'}
-                      </button>
-                      <AddToPlaylist session={session} track={track} />
+                          <h3 className="font-bold text-lg">{track.title}</h3>
+                        </div>
+                        <p className="text-gray-300">
+                          {track.artist} {track.album ? `• ${track.album}` : ''}
+                        </p>
+                        <div className="flex gap-2 items-center mt-1">
+                          <span className="bg-gray-700 px-2 py-0.5 text-xs rounded">
+                            {track.genres ? track.genres.name : 'No genre'}
+                          </span>
+                          <span className="text-xs text-gray-400">
+                            Shared by{' '}
+                            <Link
+                              to={`/profile?user=${track.user_id}`}
+                              className="underline hover:text-teal-300"
+                            >
+                              {track.profiles?.username || 'Anonymous'}
+                            </Link>
+                            {' '}• {formatDate(track.created_at)}
+                          </span>
+                          <span className="text-xs text-gray-500">
+                            • 🎵 {track.play_count || 0} plays
+                          </span>
+                        </div>
+                      </div>
+                      
+                      <div className="shrink-0 min-w-[200px] flex items-center gap-2 flex-wrap">
+                        {canPlay ? (
+                          <>
+                            <button
+                              type="button"
+                              onClick={handlePlayback}
+                              disabled={isBusy}
+                              className="bg-teal-500 text-black px-3 py-1 rounded text-sm font-semibold hover:bg-teal-400 disabled:opacity-60"
+                            >
+                              {playbackLabel}
+                            </button>
+                            {isActive && player?.error && !player.loading && (
+                              <span className="max-w-[140px] truncate text-xs text-red-400">
+                                {player.error}
+                              </span>
+                            )}
+                          </>
+                        ) : (
+                          <span className="text-red-400">Audio unavailable</span>
+                        )}
+                        <button
+                          type="button"
+                          onClick={handleLikeClick}
+                          disabled={likesLoading}
+                          className={`px-2 py-1 rounded text-sm font-semibold transition ${
+                            trackIsLiked
+                              ? 'bg-red-500 text-white hover:bg-red-400'
+                              : 'bg-gray-700 text-white hover:bg-gray-600'
+                          } disabled:opacity-60`}
+                        >
+                          {trackIsLiked ? '❤️ Liked' : '🤍 Like'}
+                        </button>
+                        <AddToPlaylist session={session} track={track} />
+                      </div>
                     </div>
                   </div>
+
+                  {/* Comments section */}
+                  {expandedComments === track.id && (
+                    <div className="bg-gray-900 p-4 rounded-b mt-0 border-t border-gray-700">
+                      <TrackComments trackId={track.id} session={session} />
+                    </div>
+                  )}
+
+                  {/* Comments toggle button */}
+                  <button
+                    type="button"
+                    onClick={() => setExpandedComments(expandedComments === track.id ? null : track.id)}
+                    className="text-xs text-blue-400 hover:underline mt-2 block"
+                  >
+                    {expandedComments === track.id ? 'Hide comments' : 'View comments'}
+                  </button>
                 </div>
               )
             })}
