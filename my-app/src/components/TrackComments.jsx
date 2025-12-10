@@ -1,28 +1,47 @@
 import { useState } from 'react'
 import { useComments } from '../hooks/useComments'
-import { getPublicStorageUrl } from '../supabaseclient'
+import { validateCommentText } from '../utils/securityUtils'
 
 const TrackComments = ({ trackId, session }) => {
   const { comments, loading, error, posting, addComment, removeComment, editComment } = useComments(trackId)
   const [commentText, setCommentText] = useState('')
   const [editingId, setEditingId] = useState(null)
   const [editingText, setEditingText] = useState('')
+  const [validationError, setValidationError] = useState(null)
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    setValidationError(null)
+
     if (!session?.user?.id) {
-      alert('Please sign in to comment')
+      setValidationError('Please sign in to comment')
       return
     }
 
-    const success = await addComment(commentText)
+    // Validate input
+    const validation = validateCommentText(commentText)
+    if (!validation.isValid) {
+      setValidationError(validation.error)
+      return
+    }
+
+    const success = await addComment(validation.text)
     if (success) {
       setCommentText('')
     }
   }
 
   const handleEditSubmit = async (commentId) => {
-    const success = await editComment(commentId, editingText)
+    setValidationError(null)
+
+    // Validate input
+    const validation = validateCommentText(editingText)
+    if (!validation.isValid) {
+      setValidationError(validation.error)
+      return
+    }
+
+    const success = await editComment(commentId, validation.text)
     if (success) {
       setEditingId(null)
       setEditingText('')
@@ -48,9 +67,9 @@ const TrackComments = ({ trackId, session }) => {
     <div className="mt-6 border-t border-gray-700 pt-6">
       <h3 className="text-xl font-bold mb-4">Comments ({comments.length})</h3>
 
-      {error && (
+      {(error || validationError) && (
         <div className="bg-red-500 bg-opacity-25 text-red-100 p-3 rounded mb-4">
-          {error}
+          {error || validationError}
         </div>
       )}
 
@@ -60,17 +79,23 @@ const TrackComments = ({ trackId, session }) => {
           <textarea
             value={commentText}
             onChange={(e) => setCommentText(e.target.value)}
-            placeholder="Share your thoughts about this track..."
+            placeholder="Share your thoughts about this track... (max 5000 characters)"
+            maxLength={5000}
             className="w-full p-3 rounded bg-gray-800 text-white border border-gray-700 focus:outline-none focus:ring-2 focus:ring-teal-400 resize-none"
             rows={3}
           />
-          <button
-            type="submit"
-            disabled={posting || !commentText.trim()}
-            className="mt-2 bg-teal-500 text-black px-4 py-2 rounded font-semibold hover:bg-teal-400 disabled:opacity-60"
-          >
-            {posting ? 'Posting...' : 'Post Comment'}
-          </button>
+          <div className="flex items-center justify-between mt-2">
+            <span className="text-xs text-gray-500">
+              {commentText.length} / 5000
+            </span>
+            <button
+              type="submit"
+              disabled={posting || !commentText.trim()}
+              className="bg-teal-500 text-black px-4 py-2 rounded font-semibold hover:bg-teal-400 disabled:opacity-60"
+            >
+              {posting ? 'Posting...' : 'Post Comment'}
+            </button>
+          </div>
         </form>
       ) : (
         <div className="bg-gray-800 p-4 rounded mb-6 text-gray-300">
@@ -114,10 +139,14 @@ const TrackComments = ({ trackId, session }) => {
                       <textarea
                         value={editingText}
                         onChange={(e) => setEditingText(e.target.value)}
+                        maxLength={5000}
                         className="w-full p-2 rounded bg-gray-700 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-teal-400 resize-none"
                         rows={2}
                       />
-                      <div className="flex gap-2 mt-2">
+                      <div className="text-xs text-gray-500 mt-1 mb-2">
+                        {editingText.length} / 5000
+                      </div>
+                      <div className="flex gap-2">
                         <button
                           onClick={() => handleEditSubmit(comment.id)}
                           className="bg-teal-500 text-black px-3 py-1 rounded text-sm font-semibold hover:bg-teal-400"
@@ -128,6 +157,7 @@ const TrackComments = ({ trackId, session }) => {
                           onClick={() => {
                             setEditingId(null)
                             setEditingText('')
+                            setValidationError(null)
                           }}
                           className="bg-gray-700 text-white px-3 py-1 rounded text-sm hover:bg-gray-600"
                         >
@@ -136,16 +166,19 @@ const TrackComments = ({ trackId, session }) => {
                       </div>
                     </div>
                   ) : (
-                    <p className="text-gray-200 mt-2 break-words">{comment.body}</p>
+                    <p className="text-gray-200 mt-2 break-words whitespace-pre-wrap">
+                      {comment.body}
+                    </p>
                   )}
 
-                  {/* Edit/Delete buttons (only for comment owner) */}
+                  {/* Edit/Delete buttons */}
                   {session?.user?.id === comment.user_id && editingId !== comment.id && (
                     <div className="flex gap-2 mt-2">
                       <button
                         onClick={() => {
                           setEditingId(comment.id)
                           setEditingText(comment.body)
+                          setValidationError(null)
                         }}
                         className="text-xs text-teal-400 hover:underline"
                       >

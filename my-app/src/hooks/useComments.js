@@ -1,8 +1,11 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useMemo } from 'react'
 import { postComment, fetchComments, deleteComment, updateComment } from '../utils/commentUtils'
+import { checkRateLimit } from '../utils/securityUtils'
+
+const COMMENT_RATE_LIMIT_MS = 5000 // 5 seconds between comments
 
 /**
- * Hook to manage track comments
+ * Hook to manage track comments with optimizations and rate limiting
  * @param {number} trackId - The track ID
  * @returns {Object} Comments state and methods
  */
@@ -12,7 +15,7 @@ export function useComments(trackId) {
   const [error, setError] = useState(null)
   const [posting, setPosting] = useState(false)
 
-  // Fetch comments when trackId changes
+  // Memoize fetch to prevent unnecessary calls
   const loadComments = useCallback(async () => {
     if (!trackId) return
 
@@ -33,10 +36,19 @@ export function useComments(trackId) {
     loadComments()
   }, [loadComments])
 
-  // Post a comment
+  // Post a comment with rate limiting
   const addComment = useCallback(async (body) => {
     if (!trackId || !body?.trim()) {
       setError('Comment cannot be empty')
+      return false
+    }
+
+    // Check rate limit
+    const rateLimitKey = `comment_${trackId}`
+    const { canProceed, remainingMs } = checkRateLimit(rateLimitKey, COMMENT_RATE_LIMIT_MS)
+    
+    if (!canProceed) {
+      setError(`Please wait ${Math.ceil(remainingMs / 1000)} seconds before posting another comment`)
       return false
     }
 
@@ -90,7 +102,8 @@ export function useComments(trackId) {
     }
   }, [])
 
-  return {
+  // Memoize return object to prevent unnecessary dependency updates
+  return useMemo(() => ({
     comments,
     loading,
     error,
@@ -99,5 +112,5 @@ export function useComments(trackId) {
     removeComment,
     editComment,
     loadComments
-  }
+  }), [comments, loading, error, posting, addComment, removeComment, editComment, loadComments])
 }

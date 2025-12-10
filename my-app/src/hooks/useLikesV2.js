@@ -1,8 +1,11 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef, useMemo } from 'react'
 import { supabase } from '../supabaseclient'
+import { checkRateLimit } from '../utils/securityUtils'
+
+const LIKE_RATE_LIMIT_MS = 2000 // 2 seconds between like/unlike actions
 
 /**
- * useLikesV2 – Manage track likes with optimistic updates
+ * useLikesV2 – Manage track likes with optimistic updates, debouncing, and rate limiting
  * @param {string} userId – Current user's ID (from session)
  * @returns {Object} { isLiked, toggleLike, loading, error, reset }
  */
@@ -10,9 +13,12 @@ export const useLikesV2 = (userId) => {
   const [likedTracks, setLikedTracks] = useState(new Set())
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  
+  // Track pending requests to prevent race conditions
+  const pendingRequests = useRef(new Map())
 
   /**
-   * Fetch current user's liked track IDs
+   * Fetch current user's liked track IDs with caching
    */
   const fetchLikedTracks = useCallback(async (trackIds) => {
     if (!userId || !trackIds || trackIds.length === 0) {
@@ -23,11 +29,14 @@ export const useLikesV2 = (userId) => {
     setLoading(true)
     setError(null)
     try {
+      // Deduplicate trackIds
+      const uniqueIds = Array.from(new Set(trackIds))
+      
       const { data, error: fetchError } = await supabase
         .from('track_likes')
         .select('track_id')
         .eq('user_id', userId)
-        .in('track_id', trackIds)
+        .in('track_id', uniqueIds)
 
       if (fetchError) throw fetchError
 
@@ -42,7 +51,7 @@ export const useLikesV2 = (userId) => {
   }, [userId])
 
   /**
-   * Toggle like/unlike with optimistic update
+   * Toggle like/unlike with optimistic update, debouncing, and rate limiting
    */
   const toggleLike = useCallback(async (trackId) => {
     if (!userId) {
@@ -50,12 +59,29 @@ export const useLikesV2 = (userId) => {
       return false
     }
 
-    if (!trackId) {
+    if (!Number.isInteger(trackId) || trackId <= 0) {
       setError('Invalid track ID')
       return false
     }
 
+    // Prevent duplicate requests for same track
+    if (pendingRequests.current.has(trackId)) {
+      return false
+    }
+
+    // Check rate limit per track
+    const rateLimitKey = `like_${trackId}`
+    const { canProceed, remainingMs } = checkRateLimit(rateLimitKey, LIKE_RATE_LIMIT_MS)
+    
+    if (!canProceed) {
+      setError(`Please wait ${Math.ceil(remainingMs / 1000)}s before liking again`)
+      return false
+    }
+
     const isCurrentlyLiked = likedTracks.has(trackId)
+
+    // Mark request as pending
+    pendingRequests.current.set(trackId, true)
 
     // Optimistic update
     setLikedTracks(prev => {
@@ -86,7 +112,6 @@ export const useLikesV2 = (userId) => {
         if (error) {
           // Check if it's a duplicate-key error (already liked)
           if (error.details && error.details.toString().includes('already exists')) {
-            // Treat as success (already liked)
             return true
           }
           throw error
@@ -111,6 +136,9 @@ export const useLikesV2 = (userId) => {
       })
 
       return false
+    } finally {
+      // Remove from pending requests
+      pendingRequests.current.delete(trackId)
     }
   }, [userId, likedTracks])
 
@@ -128,14 +156,15 @@ export const useLikesV2 = (userId) => {
     setLikedTracks(new Set())
     setLoading(false)
     setError(null)
+    pendingRequests.current.clear()
   }, [])
 
-  return {
+  return useMemo(() => ({
     isLiked,
     toggleLike,
     loading,
     error,
     fetchLikedTracks,
     reset
-  }
+  }), [isLiked, toggleLike, loading, error, fetchLikedTracks, reset])
 }

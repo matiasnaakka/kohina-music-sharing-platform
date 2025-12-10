@@ -6,13 +6,25 @@
 
 import { createClient } from '@supabase/supabase-js'
 
-//creates supabase client
+// Create supabase client
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
-// Warn early if environment is not configured
+// Validate environment on initialization
 if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn('Missing VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY in environment')
+  const missingVars = []
+  if (!supabaseUrl) missingVars.push('VITE_SUPABASE_URL')
+  if (!supabaseAnonKey) missingVars.push('VITE_SUPABASE_ANON_KEY')
+  
+  console.error(
+    `Missing required environment variables: ${missingVars.join(', ')}. ` +
+    `Please add them to your .env file.`
+  )
+  
+  // Throw error in production
+  if (import.meta.env.PROD) {
+    throw new Error(`Missing critical environment variables: ${missingVars.join(', ')}`)
+  }
 }
 
 /**
@@ -23,9 +35,15 @@ if (!supabaseUrl || !supabaseAnonKey) {
  */
 export const getPublicStorageUrl = (bucket, path) => {
   if (!supabaseUrl || !path) return null
-  // Supabase public storage objects are available under /storage/v1/object/public/{bucket}/{path}
-  return `${supabaseUrl}/storage/v1/object/public/${bucket}/${path}`
+  
+  // Validate inputs to prevent injection attacks
+  if (typeof bucket !== 'string' || typeof path !== 'string') return null
+  
+  // Ensure no null bytes or suspicious patterns
+  if (bucket.includes('\0') || path.includes('\0')) return null
+  
+  return `${supabaseUrl}/storage/v1/object/public/${encodeURIComponent(bucket)}/${encodeURIComponent(path)}`
 }
 
-// Create and export a single Supabase client instance used across the app
+// Create and export a single Supabase client instance
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)

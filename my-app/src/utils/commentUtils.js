@@ -1,4 +1,5 @@
 import { supabase } from '../supabaseclient'
+import { validateId, validateCommentText } from './securityUtils'
 
 /**
  * Post a comment on a track
@@ -7,8 +8,14 @@ import { supabase } from '../supabaseclient'
  * @returns {Promise<Object>} The created comment
  */
 export async function postComment(trackId, body) {
-  if (!trackId || !body?.trim()) {
-    throw new Error('Track ID and comment text are required')
+  // Validate inputs
+  if (!validateId(trackId)) {
+    throw new Error('Invalid track ID')
+  }
+
+  const validation = validateCommentText(body)
+  if (!validation.isValid) {
+    throw new Error(validation.error)
   }
 
   const user = (await supabase.auth.getUser())?.data?.user
@@ -21,7 +28,7 @@ export async function postComment(trackId, body) {
     .insert({
       track_id: trackId,
       user_id: user.id,
-      body: body.trim()
+      body: validation.text
     })
     .select()
     .single()
@@ -41,8 +48,8 @@ export async function postComment(trackId, body) {
  * @returns {Promise<Array>} Array of comments with user info
  */
 export async function fetchComments(trackId, { from = 0, to = 49 } = {}) {
-  if (!trackId) {
-    throw new Error('Track ID is required')
+  if (!validateId(trackId)) {
+    throw new Error('Invalid track ID')
   }
 
   const { data, error } = await supabase
@@ -70,19 +77,42 @@ export async function fetchComments(trackId, { from = 0, to = 49 } = {}) {
 }
 
 /**
- * Delete a comment (hard delete)
+ * Delete a comment (hard delete) - with authorization check
  * @param {number} commentId - The comment ID
  * @returns {Promise<Object>} Success response
  */
 export async function deleteComment(commentId) {
-  if (!commentId) {
-    throw new Error('Comment ID is required')
+  if (!validateId(commentId)) {
+    throw new Error('Invalid comment ID')
+  }
+
+  // Get current user
+  const { data: { user }, error: userError } = await supabase.auth.getUser()
+  if (userError || !user) {
+    throw new Error('Not authenticated')
+  }
+
+  // Fetch comment to verify ownership
+  const { data: comment, error: fetchError } = await supabase
+    .from('track_comments')
+    .select('id, user_id')
+    .eq('id', commentId)
+    .single()
+
+  if (fetchError || !comment) {
+    throw new Error('Comment not found')
+  }
+
+  // Verify ownership (client-side check; RLS enforces on backend)
+  if (comment.user_id !== user.id) {
+    throw new Error('Unauthorized: You can only delete your own comments')
   }
 
   const { error } = await supabase
     .from('track_comments')
     .delete()
     .eq('id', commentId)
+    .eq('user_id', user.id) // Double-check via RLS
 
   if (error) {
     console.error('Delete comment error:', error)
@@ -93,23 +123,51 @@ export async function deleteComment(commentId) {
 }
 
 /**
- * Update a comment
+ * Update a comment - with authorization check
  * @param {number} commentId - The comment ID
  * @param {string} newBody - The new comment text
  * @returns {Promise<Object>} The updated comment
  */
 export async function updateComment(commentId, newBody) {
-  if (!commentId || !newBody?.trim()) {
-    throw new Error('Comment ID and text are required')
+  if (!validateId(commentId)) {
+    throw new Error('Invalid comment ID')
+  }
+
+  const validation = validateCommentText(newBody)
+  if (!validation.isValid) {
+    throw new Error(validation.error)
+  }
+
+  // Get current user
+  const { data: { user }, error: userError } = await supabase.auth.getUser()
+  if (userError || !user) {
+    throw new Error('Not authenticated')
+  }
+
+  // Fetch comment to verify ownership
+  const { data: comment, error: fetchError } = await supabase
+    .from('track_comments')
+    .select('id, user_id')
+    .eq('id', commentId)
+    .single()
+
+  if (fetchError || !comment) {
+    throw new Error('Comment not found')
+  }
+
+  // Verify ownership
+  if (comment.user_id !== user.id) {
+    throw new Error('Unauthorized: You can only edit your own comments')
   }
 
   const { data, error } = await supabase
     .from('track_comments')
     .update({
-      body: newBody.trim(),
+      body: validation.text,
       updated_at: new Date().toISOString()
     })
     .eq('id', commentId)
+    .eq('user_id', user.id) // Double-check via RLS
     .select()
     .single()
 
