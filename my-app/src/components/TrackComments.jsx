@@ -1,8 +1,10 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useComments } from '../hooks/useComments'
 import { validateCommentText } from '../utils/securityUtils'
 
 const TrackComments = ({ trackId, session }) => {
+  const navigate = useNavigate()
   const { comments, loading, error, posting, addComment, removeComment, editComment } = useComments(trackId)
   const [commentText, setCommentText] = useState('')
   const [editingId, setEditingId] = useState(null)
@@ -45,6 +47,15 @@ const TrackComments = ({ trackId, session }) => {
     if (success) {
       setEditingId(null)
       setEditingText('')
+    }
+  }
+
+  const handleProfileClick = (userId) => {
+    if (!userId) return
+    if (userId === session?.user?.id) {
+      navigate('/profile')
+    } else {
+      navigate(`/profile?user=${userId}`)
     }
   }
 
@@ -113,18 +124,29 @@ const TrackComments = ({ trackId, session }) => {
           {comments.map(comment => (
             <div key={comment.id} className="bg-gray-800 bg-opacity-50 p-4 rounded">
               <div className="flex gap-3">
-                <img
-                  src={comment.profiles?.avatar_url || '/default-avatar.png'}
-                  alt={comment.profiles?.username || 'User'}
-                  className="w-10 h-10 rounded-full object-cover shrink-0"
-                  onError={(e) => { e.target.src = '/default-avatar.png' }}
-                />
+                <button
+                  type="button"
+                  onClick={() => handleProfileClick(comment.user_id)}
+                  className="shrink-0 hover:opacity-80 transition"
+                  title={comment.profiles?.username || 'User profile'}
+                >
+                  <img
+                    src={comment.profiles?.avatar_url || '/default-avatar.png'}
+                    alt={comment.profiles?.username || 'User'}
+                    className="w-10 h-10 rounded-full object-cover"
+                    onError={(e) => { e.target.src = '/default-avatar.png' }}
+                  />
+                </button>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
                     <div>
-                      <p className="font-semibold text-white">
+                      <button
+                        type="button"
+                        onClick={() => handleProfileClick(comment.user_id)}
+                        className="font-semibold text-white hover:text-teal-300 transition text-left"
+                      >
                         {comment.profiles?.username || 'Anonymous'}
-                      </p>
+                      </button>
                       <p className="text-xs text-gray-400">
                         {formatDate(comment.created_at)}
                         {comment.updated_at && comment.updated_at !== comment.created_at && (
