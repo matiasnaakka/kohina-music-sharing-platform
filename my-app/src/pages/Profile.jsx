@@ -521,7 +521,7 @@ export default function Profile({ session, player }) {
                       </div>
                     ) : (
                       <div className="grid grid-cols-1 gap-4">
-                        {ownTracks.map((track) => {
+                        {ownTracks.map((track, idx) => {
                           const coverSrc =
                             getPublicStorageUrl('track-images', track.image_path) ||
                             ownProfile?.avatar_url ||
@@ -555,7 +555,8 @@ export default function Profile({ session, player }) {
                                   width="96"
                                   height="96"
                                   decoding="async"
-                                  loading="lazy"
+                                  fetchpriority={idx === 0 ? 'high' : undefined}
+                                  loading={idx === 0 ? 'eager' : 'lazy'}
                                   onError={(e) => { e.target.src = ownProfile?.avatar_url || '/default-avatar.png' }}
                                 />
                                 <div className="flex flex-col md:flex-row justify-between flex-1">
@@ -859,7 +860,7 @@ export default function Profile({ session, player }) {
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 gap-4">
-                      {publicTracks.map((track) => {
+                      {publicTracks.map((track, idx) => {
                         const coverSrc =
                           getPublicStorageUrl('track-images', track.image_path) ||
                           publicProfile?.avatar_url ||
@@ -893,7 +894,8 @@ export default function Profile({ session, player }) {
                                 width="96"
                                 height="96"
                                 decoding="async"
-                                loading="lazy"
+                                fetchpriority={idx === 0 ? 'high' : undefined}
+                                loading={idx === 0 ? 'eager' : 'lazy'}
                                 onError={(e) => { e.target.src = publicProfile?.avatar_url || '/default-avatar.png' }}
                               />
                               <div className="flex flex-col md:flex-row justify-between flex-1">

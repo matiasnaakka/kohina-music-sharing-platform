@@ -76,10 +76,10 @@ const UserProfile = ({ session, isModal = false, onClose, readOnly = false }) =>
     
     try {
       // If file is large, compress it (or attempt compression for all images to reduce size)
-      const MAX_MB = 5
+      const MAX_MB = 3
       const compressOptions = {
-        maxSizeMB: 1, // target size (adjust as needed)
-        maxWidthOrHeight: 1920,
+        maxSizeMB: 0.5,          // ~0.5MB target
+        maxWidthOrHeight: 256,   // downscale to avatar-sized
         useWebWorker: true,
         initialQuality: 0.8,
       }

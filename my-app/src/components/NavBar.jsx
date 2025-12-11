@@ -74,6 +74,11 @@ const NavBar = ({ session, onSignOut }) => {
               alt={session.user.email || 'User avatar'}
               title={session.user.email}
               className="w-8 h-8 rounded-full object-cover border border-gray-700"
+              width="32"
+              height="32"
+              decoding="async"
+              fetchpriority="high"
+              loading="eager"
               onError={(e) => { e.target.src = '/default-avatar.png' }}
             />
 
@@ -92,6 +97,11 @@ const NavBar = ({ session, onSignOut }) => {
               alt={session.user.email || 'User avatar'}
               title={session.user.email}
               className="w-7 h-7 rounded-full object-cover border border-gray-700"
+              width="28"
+              height="28"
+              decoding="async"
+              fetchpriority="high"
+              loading="eager"
               onError={(e) => { e.target.src = '/default-avatar.png' }}
             />
             <button

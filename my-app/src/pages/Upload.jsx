@@ -172,8 +172,8 @@ export default function Upload({ session, player }) {
       
       // Compress cover image before upload to avoid server-side size limits (5MB)
       const compressOptions = {
-        maxSizeMB: 1, // target ~1MB (adjust as needed)
-        maxWidthOrHeight: 1920,
+        maxSizeMB: 0.8,           // smaller target size
+        maxWidthOrHeight: 512,    // downscale covers to ~512px
         useWebWorker: true,
         initialQuality: 0.8,
       }
@@ -265,7 +265,7 @@ export default function Upload({ session, player }) {
     setSuccess(null)
     try {
       // Compress image before upload to respect the 5MB limit
-      const compressOptions = { maxSizeMB: 1, maxWidthOrHeight: 1920, useWebWorker: true, initialQuality: 0.8 }
+      const compressOptions = { maxSizeMB: 0.8, maxWidthOrHeight: 512, useWebWorker: true, initialQuality: 0.8 }
       let compressedBlob
       try {
         compressedBlob = await imageCompression(coverFile, compressOptions)

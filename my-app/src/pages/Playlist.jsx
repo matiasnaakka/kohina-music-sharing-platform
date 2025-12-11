@@ -178,7 +178,7 @@ export default function Playlist({ session, player }) {
           </div>
         ) : (
           <div className="space-y-3">
-            {tracks.map(track => {
+            {tracks.map((track, idx) => {
               const coverSrc =
                 getPublicStorageUrl('track-images', track.image_path) ||
                 track.profiles?.avatar_url ||
@@ -212,7 +212,8 @@ export default function Playlist({ session, player }) {
                       width="80"
                       height="80"
                       decoding="async"
-                      loading="lazy"
+                      fetchpriority={idx === 0 ? 'high' : undefined}
+                      loading={idx === 0 ? 'eager' : 'lazy'}
                       onError={(e) => { e.target.src = track.profiles?.avatar_url || '/default-avatar.png' }}
                     />
                     <div className="flex flex-col md:flex-row justify-between flex-1 gap-2">

@@ -276,7 +276,7 @@ export default function Home({ session, player }) {
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-4">
-            {filteredTracks.map(track => {
+            {filteredTracks.map((track, idx) => {
               const coverSrc =
                 getPublicStorageUrl('track-images', track.image_path) ||
                 track.profiles?.avatar_url ||
@@ -313,7 +313,9 @@ export default function Home({ session, player }) {
                       width="96"
                       height="96"
                       decoding="async"
-                      loading="lazy"
+                      // Prioritize first cover for LCP
+                      fetchpriority={idx === 0 ? 'high' : undefined}
+                      loading={idx === 0 ? 'eager' : 'lazy'}
                       onError={(e) => { e.target.src = track.profiles?.avatar_url || '/default-avatar.png' }}
                     />
                     <div className="flex flex-col md:flex-row justify-between flex-1">

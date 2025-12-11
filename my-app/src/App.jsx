@@ -237,6 +237,104 @@ const App = () => {
         ensureLink('preconnect')
         ensureLink('dns-prefetch')
       }
+
+      // PWA meta
+      const ensureMeta = (name, content) => {
+        let m = document.querySelector(`meta[name="${name}"]`)
+        if (!m) {
+          m = document.createElement('meta')
+          m.name = name
+          document.head.appendChild(m)
+        }
+        m.setAttribute('content', content)
+      }
+      ensureMeta('theme-color', '#14b8a6')
+      ensureMeta('apple-mobile-web-app-capable', 'yes')
+      ensureMeta('apple-mobile-web-app-status-bar-style', 'black')
+
+      // Register Service Worker via Blob (no new file needed)
+      if ('serviceWorker' in navigator && import.meta.env.PROD) {
+        const CACHE_VERSION = 'v1'
+        const swCode = `
+          const VERSION = '${CACHE_VERSION}'
+          const CORE_CACHE = 'core-' + VERSION
+          const RUNTIME_CACHE = 'runtime-' + VERSION
+
+          const CORE_ASSETS = [
+            '/',
+            '/index.html',
+            '/home',
+            '/default-avatar.png'
+          ]
+
+          self.addEventListener('install', (event) => {
+            event.waitUntil(
+              caches.open(CORE_CACHE).then((cache) => cache.addAll(CORE_ASSETS)).then(() => self.skipWaiting())
+            )
+          })
+
+          self.addEventListener('activate', (event) => {
+            event.waitUntil(
+              caches.keys().then((keys) =>
+                Promise.all(keys.map((key) => {
+                  if (!key.includes(VERSION)) return caches.delete(key)
+                }))
+              ).then(() => self.clients.claim())
+            )
+          })
+
+          // Network-first for navigation; cache-first for static; stale-while-revalidate for runtime
+          self.addEventListener('fetch', (event) => {
+            const req = event.request
+            const url = new URL(req.url)
+
+            // Handle navigation requests (SPA) with network-first and fallback to cache
+            if (req.mode === 'navigate') {
+              event.respondWith(
+                fetch(req).catch(() => caches.match('/index.html'))
+              )
+              return
+            }
+
+            // Cache-first for images and static assets
+            if (req.destination === 'image' || req.destination === 'style' || req.destination === 'script' || req.destination === 'font') {
+              event.respondWith(
+                caches.match(req).then((cached) => {
+                  if (cached) return cached
+                  return fetch(req).then((resp) => {
+                    const clone = resp.clone()
+                    caches.open(RUNTIME_CACHE).then((cache) => cache.put(req, clone))
+                    return resp
+                  })
+                })
+              )
+              return
+            }
+
+            // Supabase storage: stale-while-revalidate for audio/images
+            if (url.pathname.includes('/storage/v1/object/public/')) {
+              event.respondWith(
+                caches.match(req).then((cached) => {
+                  const fetchPromise = fetch(req).then((resp) => {
+                    const clone = resp.clone()
+                    caches.open(RUNTIME_CACHE).then((cache) => cache.put(req, clone))
+                    return resp
+                  }).catch(() => cached)
+                  return cached || fetchPromise
+                })
+              )
+              return
+            }
+
+            // Default: pass-through
+          })
+        `
+        const swBlob = new Blob([swCode], { type: 'application/javascript' })
+        const swUrl = URL.createObjectURL(swBlob)
+        navigator.serviceWorker.register(swUrl).catch((err) => {
+          console.warn('Service worker registration failed:', err)
+        })
+      }
     } catch {
       // no-op
     }
