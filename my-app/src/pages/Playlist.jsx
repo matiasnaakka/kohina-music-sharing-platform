@@ -1,10 +1,9 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, lazy, Suspense } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { supabase, getPublicStorageUrl } from '../supabaseclient'
 import NavBar from '../components/NavBar'
-import AddToPlaylist from '../components/AddToPlaylist'
-import TrackComments from '../components/TrackComments'
 import { useLikesV2 } from '../hooks/useLikesV2'
+const TrackComments = lazy(() => import('../components/TrackComments'))
 
 export default function Playlist({ session, player }) {
   const location = useLocation()
@@ -210,6 +209,10 @@ export default function Playlist({ session, player }) {
                       src={coverSrc}
                       alt={`${track.title} cover`}
                       className="w-20 h-20 object-cover rounded"
+                      width="80"
+                      height="80"
+                      decoding="async"
+                      loading="lazy"
                       onError={(e) => { e.target.src = track.profiles?.avatar_url || '/default-avatar.png' }}
                     />
                     <div className="flex flex-col md:flex-row justify-between flex-1 gap-2">
@@ -268,7 +271,9 @@ export default function Playlist({ session, player }) {
                   {/* Comments section */}
                   {expandedComments === track.id && (
                     <div className="bg-gray-900 p-4 rounded-b mt-0 border-t border-gray-700">
-                      <TrackComments trackId={track.id} session={session} />
+                      <Suspense fallback={<div className="text-gray-400 text-sm">Loading comments…</div>}>
+                        <TrackComments trackId={track.id} session={session} />
+                      </Suspense>
                     </div>
                   )}
 

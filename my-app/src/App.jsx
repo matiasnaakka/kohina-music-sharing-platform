@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef, useCallback, useEffect } from 'react'
 import Routing from './Router'
-import { supabase, getPublicStorageUrl } from './supabaseclient'
+import { supabase, getPublicStorageUrl, SUPABASE_URL } from './supabaseclient'
 import { useIncrementPlayCount } from './hooks/useIncrementPlayCount'
 
 /*
@@ -207,6 +207,41 @@ const App = () => {
     [playerState, playTrack, pause, resume, stop],
   )
 
+  // Add basic SEO/meta and connection hints
+  useEffect(() => {
+    try {
+      // Meta description
+      const desc = 'Kohina – upload, discover, like and share music tracks.'
+      let meta = document.querySelector('meta[name="description"]')
+      if (!meta) {
+        meta = document.createElement('meta')
+        meta.name = 'description'
+        document.head.appendChild(meta)
+      }
+      if (!meta.getAttribute('content')) {
+        meta.setAttribute('content', desc)
+      }
+
+      // Preconnect/DNS-prefetch to Supabase origin
+      if (SUPABASE_URL) {
+        const origin = new URL(SUPABASE_URL).origin
+        const ensureLink = (rel) => {
+          const sel = `link[rel="${rel}"][href="${origin}"]`
+          if (!document.head.querySelector(sel)) {
+            const link = document.createElement('link')
+            link.rel = rel
+            link.href = origin
+            document.head.appendChild(link)
+          }
+        }
+        ensureLink('preconnect')
+        ensureLink('dns-prefetch')
+      }
+    } catch {
+      // no-op
+    }
+  }, [])
+
   return (
     <>
       <Routing player={player} />
@@ -339,6 +374,10 @@ const GlobalAudioPlayer = ({ audioRef, playerState, pause, resume, stop, session
           src={imageSrc}
           alt={track.title || 'Now playing'}
           className="h-12 w-12 rounded object-cover"
+          width="48"
+          height="48"
+          decoding="async"
+          loading="lazy"
           onError={(e) => {
             e.target.src = '/default-avatar.png'
           }}
@@ -370,7 +409,7 @@ const GlobalAudioPlayer = ({ audioRef, playerState, pause, resume, stop, session
           </button>
         </div>
       </div>
-      <audio ref={audioRef} className="hidden" />
+      <audio ref={audioRef} className="hidden" preload="metadata" />
     </div>
   )
 }

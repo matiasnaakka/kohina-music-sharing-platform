@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, lazy, Suspense } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import NavBar from '../components/NavBar'
 import { supabase, getPublicStorageUrl } from '../supabaseclient'
 import UserProfile from '../components/UserProfile'
-import AddToPlaylist from '../components/AddToPlaylist'
-import TrackComments from '../components/TrackComments'
+const AddToPlaylist = lazy(() => import('../components/AddToPlaylist'))
+const TrackComments = lazy(() => import('../components/TrackComments'))
 import { useLikesV2 } from '../hooks/useLikesV2'
 
 export default function Profile({ session, player }) {
@@ -464,6 +464,10 @@ export default function Profile({ session, player }) {
                     src={ownProfile.avatar_url || '/default-avatar.png'}
                     alt={`${ownProfile.username}'s avatar`}
                     className="w-24 h-24 object-cover"
+                    width="96"
+                    height="96"
+                    decoding="async"
+                    loading="lazy"
                     onError={(e) => { e.target.src = '/default-avatar.png' }}
                   />
                   <div className="flex-1">
@@ -548,6 +552,10 @@ export default function Profile({ session, player }) {
                                   src={coverSrc}
                                   alt={`${track.title} cover`}
                                   className="w-24 h-24 object-cover rounded"
+                                  width="96"
+                                  height="96"
+                                  decoding="async"
+                                  loading="lazy"
                                   onError={(e) => { e.target.src = ownProfile?.avatar_url || '/default-avatar.png' }}
                                 />
                                 <div className="flex flex-col md:flex-row justify-between flex-1">
@@ -602,7 +610,9 @@ export default function Profile({ session, player }) {
                                     >
                                       {trackIsLiked ? '❤️ Liked' : '🤍 Like'}
                                     </button>
-                                    <AddToPlaylist session={session} track={track} />
+                                    <Suspense fallback={null}>
+                                      <AddToPlaylist session={session} track={track} />
+                                    </Suspense>
                                   </div>
                                 </div>
                               </div>
@@ -610,7 +620,9 @@ export default function Profile({ session, player }) {
                               {/* Comments section */}
                               {expandedComments === track.id && (
                                 <div className="bg-gray-900 p-4 rounded-b mt-0 border-t border-gray-700">
-                                  <TrackComments trackId={track.id} session={session} />
+                                  <Suspense fallback={<div className="text-gray-400 text-sm">Loading comments…</div>}>
+                                    <TrackComments trackId={track.id} session={session} />
+                                  </Suspense>
                                 </div>
                               )}
 
@@ -702,6 +714,10 @@ export default function Profile({ session, player }) {
                                     src={coverSrc}
                                     alt={`${track.title} cover`}
                                     className="w-12 h-12 object-cover rounded shrink-0"
+                                    width="48"
+                                    height="48"
+                                    decoding="async"
+                                    loading="lazy"
                                     onError={(e) => { e.target.src = track.profiles?.avatar_url || '/default-avatar.png' }}
                                   />
                                   <div className="min-w-0 flex-1">
@@ -742,7 +758,9 @@ export default function Profile({ session, player }) {
                                   >
                                     {trackIsLiked ? '❤️' : '🤍'}
                                   </button>
-                                  <AddToPlaylist session={session} track={track} />
+                                  <Suspense fallback={null}>
+                                    <AddToPlaylist session={session} track={track} />
+                                  </Suspense>
                                 </div>
                               </div>
                             )
@@ -780,6 +798,10 @@ export default function Profile({ session, player }) {
                   src={publicProfile.avatar_url || '/default-avatar.png'}
                   alt={`${publicProfile.username}'s avatar`}
                   className="w-24 h-24 object-cover"
+                  width="96"
+                  height="96"
+                  decoding="async"
+                  loading="lazy"
                   onError={(e) => { e.target.src = '/default-avatar.png' }}
                 />
                 <div className="flex-1">
@@ -868,6 +890,10 @@ export default function Profile({ session, player }) {
                                 src={coverSrc}
                                 alt={`${track.title} cover`}
                                 className="w-24 h-24 object-cover rounded"
+                                width="96"
+                                height="96"
+                                decoding="async"
+                                loading="lazy"
                                 onError={(e) => { e.target.src = publicProfile?.avatar_url || '/default-avatar.png' }}
                               />
                               <div className="flex flex-col md:flex-row justify-between flex-1">
@@ -919,7 +945,9 @@ export default function Profile({ session, player }) {
                                   >
                                     {trackIsLiked ? '❤️ Liked' : '🤍 Like'}
                                   </button>
-                                  <AddToPlaylist session={session} track={track} />
+                                  <Suspense fallback={null}>
+                                    <AddToPlaylist session={session} track={track} />
+                                  </Suspense>
                                 </div>
                               </div>
                             </div>
@@ -927,7 +955,9 @@ export default function Profile({ session, player }) {
                             {/* Comments section */}
                             {expandedComments === track.id && (
                               <div className="bg-gray-900 p-4 rounded-b mt-0 border-t border-gray-700">
-                                <TrackComments trackId={track.id} session={session} />
+                                <Suspense fallback={<div className="text-gray-400 text-sm">Loading comments…</div>}>
+                                  <TrackComments trackId={track.id} session={session} />
+                                </Suspense>
                               </div>
                             )}
 
@@ -1019,6 +1049,10 @@ export default function Profile({ session, player }) {
                                   src={coverSrc}
                                   alt={`${track.title} cover`}
                                   className="w-12 h-12 object-cover rounded shrink-0"
+                                  width="48"
+                                  height="48"
+                                  decoding="async"
+                                  loading="lazy"
                                   onError={(e) => { e.target.src = track.profiles?.avatar_url || '/default-avatar.png' }}
                                 />
                                 <div className="min-w-0 flex-1">
@@ -1059,7 +1093,9 @@ export default function Profile({ session, player }) {
                                 >
                                   {trackIsLiked ? '❤️' : '🤍'}
                                 </button>
-                                <AddToPlaylist session={session} track={track} />
+                                <Suspense fallback={null}>
+                                  <AddToPlaylist session={session} track={track} />
+                                </Suspense>
                               </div>
                             </div>
                           )

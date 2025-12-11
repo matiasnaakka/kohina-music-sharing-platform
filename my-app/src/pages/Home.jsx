@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, lazy, Suspense } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase, getPublicStorageUrl } from '../supabaseclient'
 import NavBar from '../components/NavBar'
-import AddToPlaylist from '../components/AddToPlaylist'
-import TrackComments from '../components/TrackComments'
+const AddToPlaylist = lazy(() => import('../components/AddToPlaylist'))
+const TrackComments = lazy(() => import('../components/TrackComments'))
 import { useLikesV2 } from '../hooks/useLikesV2'
 
 export default function Home({ session, player }) {
@@ -310,6 +310,10 @@ export default function Home({ session, player }) {
                       src={coverSrc}
                       alt={`${track.title} cover`}
                       className="w-24 h-24 object-cover rounded"
+                      width="96"
+                      height="96"
+                      decoding="async"
+                      loading="lazy"
                       onError={(e) => { e.target.src = track.profiles?.avatar_url || '/default-avatar.png' }}
                     />
                     <div className="flex flex-col md:flex-row justify-between flex-1">
@@ -320,6 +324,10 @@ export default function Home({ session, player }) {
                               src={track.profiles.avatar_url} 
                               alt="User avatar"
                               className="w-8 h-8 rounded-full object-cover"
+                              width="32"
+                              height="32"
+                              decoding="async"
+                              loading="lazy"
                               onError={(e) => e.target.src = '/default-avatar.png'}
                             />
                           )}
@@ -380,7 +388,9 @@ export default function Home({ session, player }) {
                         >
                           {trackIsLiked ? '❤️ Liked' : '🤍 Like'}
                         </button>
-                        <AddToPlaylist session={session} track={track} />
+                        <Suspense fallback={null}>
+                          <AddToPlaylist session={session} track={track} />
+                        </Suspense>
                       </div>
                     </div>
                   </div>
@@ -388,7 +398,9 @@ export default function Home({ session, player }) {
                   {/* Comments section */}
                   {expandedComments === track.id && (
                     <div className="bg-gray-900 p-4 rounded-b mt-0 border-t border-gray-700">
-                      <TrackComments trackId={track.id} session={session} />
+                      <Suspense fallback={<div className="text-gray-400 text-sm">Loading comments…</div>}>
+                        <TrackComments trackId={track.id} session={session} />
+                      </Suspense>
                     </div>
                   )}
 

@@ -47,3 +47,6 @@ export const getPublicStorageUrl = (bucket, path) => {
 
 // Create and export a single Supabase client instance
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+
+// Export base URL for preconnect/dns-prefetch hints
+export const SUPABASE_URL = supabaseUrl
