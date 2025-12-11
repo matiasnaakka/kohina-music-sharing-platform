@@ -450,7 +450,7 @@ export default function Profile({ session, player }) {
       {isOwnProfile ? (
         <>
           {/* Unified header + tracks container (same as public layout) */}
-          <div className="max-w-4xl mx-auto mt-16 p-6 bg-black bg-opacity-80 rounded-lg text-white">
+          <div className="max-w-4xl mx-auto mt-16 p-6 bg-black bg-opacity-80 rounded-lg text-white pb-32 md:pb-6">
             {ownHeaderLoading ? (
               <div>Loading profile...</div>
             ) : ownHeaderError ? (
@@ -766,7 +766,7 @@ export default function Profile({ session, player }) {
           )}
         </>
       ) : (
-        <div className="max-w-4xl mx-auto mt-16 p-6 bg-black bg-opacity-80 rounded-lg text-white">
+        <div className="max-w-4xl mx-auto mt-16 p-6 bg-black bg-opacity-80 rounded-lg text-white pb-32 md:pb-6">
           {publicLoading ? (
             <div>Loading profile...</div>
           ) : publicError ? (
@@ -774,7 +774,7 @@ export default function Profile({ session, player }) {
           ) : !publicProfile ? (
             <div className="text-gray-300">Profile not found.</div>
           ) : (
-            <>
+            <div>
               <div className="flex flex-col md:flex-row items-start gap-4 mb-6">
                 <img
                   src={publicProfile.avatar_url || '/default-avatar.png'}
@@ -949,15 +949,15 @@ export default function Profile({ session, player }) {
                   {/* Public Playlists Sidebar */}
                   <aside className="bg-gray-900 bg-opacity-80 p-4 rounded">
                     <h4 className="text-xl font-semibold mb-3">Public playlists</h4>
-                    {publicPlaylistsLoading ? (
+                    {ownPlaylistsLoading ? (
                       <div className="text-gray-400 text-sm">Loading playlists...</div>
-                    ) : publicPlaylistsError ? (
-                      <div className="text-red-400 text-sm">{publicPlaylistsError}</div>
-                    ) : publicPlaylists.length === 0 ? (
+                    ) : ownPlaylistsError ? (
+                      <div className="text-red-400 text-sm">{ownPlaylistsError}</div>
+                    ) : ownPlaylists.length === 0 ? (
                       <div className="text-gray-400 text-sm">No public playlists yet.</div>
                     ) : (
                       <ul className="space-y-3 text-sm">
-                        {publicPlaylists.map((playlist) => (
+                        {ownPlaylists.map((playlist) => (
                           <li key={playlist.id}>
                             <Link
                               to={`/playlist?id=${playlist.id}`}
@@ -1069,54 +1069,8 @@ export default function Profile({ session, player }) {
                   </aside>
                 </div>
               </div>
-            </>
-          )}
-        </div>
-      )}
-      {followModal.open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
-          <div className="w-full max-w-md rounded-lg bg-gray-900 p-6 shadow-xl">
-            <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-xl font-semibold">
-                {followModal.type === 'followers' ? 'Followers' : 'Following'}
-              </h3>
-              <button
-                type="button"
-                onClick={closeFollowModal}
-                className="text-gray-300 hover:text-white"
-                aria-label="Close follow list"
-              >
-                ✕
-              </button>
             </div>
-            {followModalLoading ? (
-              <div className="text-gray-300">Loading...</div>
-            ) : followModalError ? (
-              <div className="text-red-400">{followModalError}</div>
-            ) : followModalUsers.length === 0 ? (
-              <div className="text-gray-400">No users to show.</div>
-            ) : (
-              <ul className="space-y-2 max-h-72 overflow-y-auto">
-                {followModalUsers.map((user) => (
-                  <li key={user.id}>
-                    <button
-                      type="button"
-                      onClick={() => handleProfileSelect(user.id)}
-                      className="flex w-full items-center gap-3 rounded bg-gray-800 px-3 py-2 text-left hover:bg-gray-700"
-                    >
-                      <img
-                        src={user.avatar_url || '/default-avatar.png'}
-                        alt={user.username || user.id}
-                        className="h-10 w-10 shrink-0 object-cover"
-                        onError={(e) => { e.target.src = '/default-avatar.png' }}
-                      />
-                      <span className="text-white">{user.username || user.id}</span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
+          )}
         </div>
       )}
     </div>
