@@ -473,6 +473,16 @@ export default function Profile({ session, player }) {
     }
   }, [publicTracks, fetchPublicLikedTracks])
 
+  // Close modal on Escape
+  useEffect(() => {
+    if (!followModal.open) return
+    const onKeyDown = (e) => {
+      if (e.key === 'Escape') closeFollowModal()
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [followModal.open]) // eslint-disable-line react-hooks/exhaustive-deps
+
   return (
     <div className="min-h-screen bg-black text-white">
       <NavBar session={session} onSignOut={handleSignOut} />
@@ -1138,6 +1148,79 @@ export default function Profile({ session, player }) {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* FOLLOW MODAL (was missing UI, so buttons looked broken) */}
+      {followModal.open && (
+        <div
+          className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4"
+          onMouseDown={(e) => {
+            // backdrop click closes
+            if (e.target === e.currentTarget) closeFollowModal()
+          }}
+        >
+          <div className="w-full max-w-md rounded-lg bg-gray-900 border border-gray-800 shadow-xl">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-800">
+              <h3 className="text-lg font-semibold">
+                {followModal.type === 'followers' ? 'Followers' : 'Following'}
+              </h3>
+              <button
+                type="button"
+                onClick={closeFollowModal}
+                className="text-gray-300 hover:text-white"
+                aria-label="Close"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-4">
+              {followModalLoading ? (
+                <div className="text-sm text-gray-400">Loading…</div>
+              ) : followModalError ? (
+                <div className="text-sm text-red-400">{followModalError}</div>
+              ) : followModalUsers.length === 0 ? (
+                <div className="text-sm text-gray-400">No users found.</div>
+              ) : (
+                <ul className="max-h-96 overflow-y-auto space-y-2">
+                  {followModalUsers.map((u) => (
+                    <li key={u.id}>
+                      <button
+                        type="button"
+                        onClick={() => handleProfileSelect(u.id)}
+                        className="w-full flex items-center gap-3 rounded bg-gray-800 hover:bg-gray-700 px-3 py-2 text-left"
+                      >
+                        <img
+                          src={u.avatar_url || '/default-avatar.png'}
+                          alt={u.username || 'User'}
+                          className="w-10 h-10 rounded-full object-cover shrink-0"
+                          width="40"
+                          height="40"
+                          loading="lazy"
+                          decoding="async"
+                          onError={(e) => { e.target.src = '/default-avatar.png' }}
+                        />
+                        <div className="min-w-0">
+                          <div className="font-semibold truncate">{u.username || 'Anonymous'}</div>
+                        </div>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            <div className="px-4 py-3 border-t border-gray-800 flex justify-end">
+              <button
+                type="button"
+                onClick={closeFollowModal}
+                className="px-3 py-1.5 rounded bg-gray-800 hover:bg-gray-700 text-sm"
+              >
+                Close
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
