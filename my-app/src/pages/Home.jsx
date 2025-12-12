@@ -345,7 +345,7 @@ export default function Home({ session, player }) {
                           <span className="text-xs text-gray-400">
                             Shared by{' '}
                             <Link
-                              to={`/profile?user=${track.user_id}`}
+                              to={`/profile?user=${encodeURIComponent(track.user_id)}`}
                               className="underline hover:text-teal-300"
                             >
                               {track.profiles?.username || 'Anonymous'}

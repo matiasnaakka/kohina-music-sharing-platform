@@ -8,10 +8,8 @@ import { validateId, validateCommentText } from './securityUtils'
  * @returns {Promise<Object>} The created comment
  */
 export async function postComment(trackId, body) {
-  // Validate inputs
-  if (!validateId(trackId)) {
-    throw new Error('Invalid track ID')
-  }
+  const tid = typeof trackId === 'string' ? Number(trackId) : trackId
+  if (!validateId(tid)) throw new Error('Invalid track ID')
 
   const validation = validateCommentText(body)
   if (!validation.isValid) {
@@ -26,7 +24,7 @@ export async function postComment(trackId, body) {
   const { data, error } = await supabase
     .from('track_comments')
     .insert({
-      track_id: trackId,
+      track_id: Number(tid),
       user_id: user.id,
       body: validation.text
     })
@@ -48,9 +46,8 @@ export async function postComment(trackId, body) {
  * @returns {Promise<Array>} Array of comments with user info
  */
 export async function fetchComments(trackId, { from = 0, to = 49 } = {}) {
-  if (!validateId(trackId)) {
-    throw new Error('Invalid track ID')
-  }
+  const tid = typeof trackId === 'string' ? Number(trackId) : trackId
+  if (!validateId(tid)) throw new Error('Invalid track ID')
 
   const { data, error } = await supabase
     .from('track_comments')
@@ -63,7 +60,7 @@ export async function fetchComments(trackId, { from = 0, to = 49 } = {}) {
       updated_at,
       profiles!track_comments_user_id_fkey(id, username, avatar_url)
     `)
-    .eq('track_id', trackId)
+    .eq('track_id', Number(tid))
     .is('deleted_at', null)
     .order('created_at', { ascending: false })
     .range(from, to)
@@ -82,9 +79,8 @@ export async function fetchComments(trackId, { from = 0, to = 49 } = {}) {
  * @returns {Promise<Object>} Success response
  */
 export async function deleteComment(commentId) {
-  if (!validateId(commentId)) {
-    throw new Error('Invalid comment ID')
-  }
+  const cid = typeof commentId === 'string' ? Number(commentId) : commentId
+  if (!validateId(cid)) throw new Error('Invalid comment ID')
 
   // Get current user
   const { data: { user }, error: userError } = await supabase.auth.getUser()
@@ -96,7 +92,7 @@ export async function deleteComment(commentId) {
   const { data: comment, error: fetchError } = await supabase
     .from('track_comments')
     .select('id, user_id')
-    .eq('id', commentId)
+    .eq('id', Number(cid))
     .single()
 
   if (fetchError || !comment) {
@@ -111,7 +107,7 @@ export async function deleteComment(commentId) {
   const { error } = await supabase
     .from('track_comments')
     .delete()
-    .eq('id', commentId)
+    .eq('id', Number(cid))
     .eq('user_id', user.id) // Double-check via RLS
 
   if (error) {
@@ -129,9 +125,8 @@ export async function deleteComment(commentId) {
  * @returns {Promise<Object>} The updated comment
  */
 export async function updateComment(commentId, newBody) {
-  if (!validateId(commentId)) {
-    throw new Error('Invalid comment ID')
-  }
+  const cid = typeof commentId === 'string' ? Number(commentId) : commentId
+  if (!validateId(cid)) throw new Error('Invalid comment ID')
 
   const validation = validateCommentText(newBody)
   if (!validation.isValid) {
@@ -148,7 +143,7 @@ export async function updateComment(commentId, newBody) {
   const { data: comment, error: fetchError } = await supabase
     .from('track_comments')
     .select('id, user_id')
-    .eq('id', commentId)
+    .eq('id', Number(cid))
     .single()
 
   if (fetchError || !comment) {
@@ -166,7 +161,7 @@ export async function updateComment(commentId, newBody) {
       body: validation.text,
       updated_at: new Date().toISOString()
     })
-    .eq('id', commentId)
+    .eq('id', Number(cid))
     .eq('user_id', user.id) // Double-check via RLS
     .select()
     .single()

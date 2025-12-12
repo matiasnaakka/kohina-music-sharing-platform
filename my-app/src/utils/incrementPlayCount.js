@@ -1,6 +1,15 @@
-import { supabase } from '../supabaseclient'
+import { supabase, SUPABASE_URL } from '../supabaseclient'
+import { validateId } from './securityUtils'
 
-const EDGE_FN_URL = 'https://mpucvjyqvjxrnjgzpyjb.supabase.co/functions/v1/increase-playcount'
+// Derive from configured Supabase project URL to avoid environment mismatches.
+const EDGE_FN_URL = (() => {
+  try {
+    if (!SUPABASE_URL) return null
+    return new URL('/functions/v1/increase-playcount', new URL(SUPABASE_URL).origin).toString()
+  } catch {
+    return null
+  }
+})()
 
 /**
  * Increment a track's play count via Edge Function
@@ -8,13 +17,14 @@ const EDGE_FN_URL = 'https://mpucvjyqvjxrnjgzpyjb.supabase.co/functions/v1/incre
  * @returns {Promise<number>} The new play count
  */
 export async function incrementPlayCount(trackId) {
-  console.log('[incrementPlayCount] Starting for track ID:', trackId)
-  
-  if (!trackId) {
-    console.error('[incrementPlayCount] Error: trackId is missing')
-    throw new Error('trackId required')
+  const id = typeof trackId === 'string' ? Number(trackId) : trackId
+  if (!validateId(id)) {
+    throw new Error('Invalid trackId')
   }
-  
+  if (!EDGE_FN_URL) {
+    throw new Error('Edge function URL not configured')
+  }
+
   // Get the user's access token from the Supabase session
   let token = null
   try {
@@ -31,7 +41,7 @@ export async function incrementPlayCount(trackId) {
     throw new Error('User session required to increment play count')
   }
   
-  const payload = { track_id: Number(trackId) }
+  const payload = { track_id: Number(id) }
   console.log('[incrementPlayCount] Payload:', payload)
   console.log('[incrementPlayCount] Edge Function URL:', EDGE_FN_URL)
   

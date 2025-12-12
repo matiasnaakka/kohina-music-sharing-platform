@@ -3,6 +3,7 @@ import { supabase, getPublicStorageUrl } from '../supabaseclient'
 import imageCompression from 'browser-image-compression'
 import NavBar from '../components/NavBar'
 import AddToPlaylist from '../components/AddToPlaylist'
+import { validateFileUpload } from '../utils/securityUtils'
 
 //This code allows users to upload audio tracks and manage them.
 
@@ -105,13 +106,36 @@ export default function Upload({ session, player }) {
   }
   
   const handleFileChange = (e) => {
-    const selectedFile = e.target.files[0]
-    console.log('isFile', selectedFile instanceof File)
+    const selectedFile = e.target.files?.[0]
+    const v = validateFileUpload(selectedFile, {
+      maxSizeMB: 10,
+      allowedTypes: ['audio/mpeg', 'audio/wav', 'audio/ogg'],
+      allowedExtensions: ['.mp3', '.wav', '.ogg'],
+    })
+    if (!v.isValid) {
+      setError(v.error)
+      setFile(null)
+      e.target.value = ''
+      return
+    }
+    setError(null)
     setFile(selectedFile)
   }
   
   const handleImageChange = (e) => {
-    const selectedImage = e.target.files[0]
+    const selectedImage = e.target.files?.[0]
+    const v = validateFileUpload(selectedImage, {
+      maxSizeMB: 5,
+      allowedTypes: ['image/jpeg', 'image/png', 'image/webp', 'image/gif'],
+      allowedExtensions: ['.jpg', '.jpeg', '.png', '.webp', '.gif'],
+    })
+    if (!v.isValid) {
+      setError(v.error)
+      setImageFile(null)
+      e.target.value = ''
+      return
+    }
+    setError(null)
     setImageFile(selectedImage || null)
   }
 

@@ -59,18 +59,19 @@ export const useLikesV2 = (userId) => {
       return false
     }
 
-    if (!Number.isInteger(trackId) || trackId <= 0) {
+    const id = typeof trackId === 'string' ? Number(trackId) : trackId
+    if (!Number.isInteger(id) || id <= 0) {
       setError('Invalid track ID')
       return false
     }
 
     // Prevent duplicate requests for same track
-    if (pendingRequests.current.has(trackId)) {
+    if (pendingRequests.current.has(id)) {
       return false
     }
 
     // Check rate limit per track
-    const rateLimitKey = `like_${trackId}`
+    const rateLimitKey = `like_${id}`
     const { canProceed, remainingMs } = checkRateLimit(rateLimitKey, LIKE_RATE_LIMIT_MS)
     
     if (!canProceed) {
@@ -78,36 +79,27 @@ export const useLikesV2 = (userId) => {
       return false
     }
 
-    const isCurrentlyLiked = likedTracks.has(trackId)
+    const isCurrentlyLiked = likedTracks.has(id)
+    pendingRequests.current.set(id, true)
 
-    // Mark request as pending
-    pendingRequests.current.set(trackId, true)
-
-    // Optimistic update
     setLikedTracks(prev => {
       const updated = new Set(prev)
-      if (isCurrentlyLiked) {
-        updated.delete(trackId)
-      } else {
-        updated.add(trackId)
-      }
+      if (isCurrentlyLiked) updated.delete(id)
+      else updated.add(id)
       return updated
     })
 
     try {
       if (isCurrentlyLiked) {
-        // Unlike
         const { error } = await supabase
           .from('track_likes')
           .delete()
-          .match({ user_id: userId, track_id: trackId })
-
+          .match({ user_id: userId, track_id: id })
         if (error) throw error
       } else {
-        // Like (idempotent: treat duplicate constraint as success)
         const { error } = await supabase
           .from('track_likes')
-          .insert([{ user_id: userId, track_id: trackId }], { returning: 'minimal' })
+          .insert([{ user_id: userId, track_id: id }], { returning: 'minimal' })
 
         if (error) {
           // Check if it's a duplicate-key error (already liked)
@@ -128,17 +120,16 @@ export const useLikesV2 = (userId) => {
       setLikedTracks(prev => {
         const updated = new Set(prev)
         if (isCurrentlyLiked) {
-          updated.add(trackId)
+          updated.add(id)
         } else {
-          updated.delete(trackId)
+          updated.delete(id)
         }
         return updated
       })
 
       return false
     } finally {
-      // Remove from pending requests
-      pendingRequests.current.delete(trackId)
+      pendingRequests.current.delete(id)
     }
   }, [userId, likedTracks])
 

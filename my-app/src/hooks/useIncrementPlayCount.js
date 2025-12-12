@@ -17,7 +17,7 @@ export function useIncrementPlayCount() {
       setLoading(false)
       return newCount
     } catch (err) {
-      setError(err)
+      setError(err?.message || String(err))
       setLoading(false)
       throw err
     }

@@ -1,4 +1,4 @@
-import { useEffect, useState, lazy, Suspense } from 'react'
+import { useEffect, useState, lazy, Suspense, useMemo } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import NavBar from '../components/NavBar'
 import { supabase, getPublicStorageUrl } from '../supabaseclient'
@@ -6,12 +6,18 @@ import UserProfile from '../components/UserProfile'
 const AddToPlaylist = lazy(() => import('../components/AddToPlaylist'))
 const TrackComments = lazy(() => import('../components/TrackComments'))
 import { useLikesV2 } from '../hooks/useLikesV2'
+import { normalizeUuid } from '../utils/securityUtils'
 
 export default function Profile({ session, player }) {
   const location = useLocation()
   const navigate = useNavigate()
-  const searchParams = new URLSearchParams(location.search)
-  const targetUserId = searchParams.get('user')
+
+  const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search])
+  const rawTargetUserId = searchParams.get('user')
+
+  // Normalize/validate early; if invalid UUID => treat as "no user param".
+  const targetUserId = useMemo(() => normalizeUuid(rawTargetUserId), [rawTargetUserId])
+
   const isOwnProfile = !targetUserId || targetUserId === session?.user?.id
   const [publicProfile, setPublicProfile] = useState(null)
   const [publicTracks, setPublicTracks] = useState([])
@@ -88,6 +94,16 @@ export default function Profile({ session, player }) {
     const fetchProfile = async () => {
       setPublicLoading(true)
       setPublicError(null)
+
+      if (import.meta.env.DEV) {
+        console.debug('[Profile] viewing user', {
+          targetUserId,
+          rawTargetUserId,
+          sessionUserId: session?.user?.id,
+          location: window.location.href,
+        })
+      }
+
       try {
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
@@ -111,12 +127,18 @@ export default function Profile({ session, player }) {
 
         setPublicPlaylistsLoading(true)
         setPublicPlaylistsError(null)
+
+        if (import.meta.env.DEV) console.debug('[Profile] playlists query owner=', targetUserId)
+
         const { data: playlistsData, error: playlistsError } = await supabase
           .from('playlists')
-          .select('id, title, description, updated_at')
-          .eq('owner', targetUserId) // FIX: only fetch this user's playlists
+          .select('id, title, description, updated_at, owner, is_public')
+          .eq('owner', targetUserId)
           .eq('is_public', true)
           .order('updated_at', { ascending: false })
+
+        if (import.meta.env.DEV) console.debug('[Profile] playlists result', { playlistsData, playlistsError })
+
         if (playlistsError) throw playlistsError
 
         const { count: followerCountResult = 0, error: followersError } = await supabase
@@ -175,7 +197,7 @@ export default function Profile({ session, player }) {
 
     fetchProfile()
     return () => { isMounted = false }
-  }, [isOwnProfile, targetUserId, session?.user?.id])
+  }, [isOwnProfile, targetUserId, rawTargetUserId, session?.user?.id])
 
   useEffect(() => {
     if (!isOwnProfile || !session?.user?.id) {

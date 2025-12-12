@@ -16,12 +16,35 @@ export const sanitizeInput = (input) => {
 }
 
 /**
- * Validate numeric IDs (track_id, playlist_id, comment_id, etc.)
+ * Normalize UUID-like input (trim, lowercase). Returns null if not a plausible UUID.
+ * @param {any} value
+ * @returns {string|null}
+ */
+export const normalizeUuid = (value) => {
+  if (typeof value !== 'string') return null
+  const v = value.trim().toLowerCase()
+  if (!v) return null
+  // UUID v1-v5 (basic check)
+  const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/
+  return uuidRe.test(v) ? v : null
+}
+
+/**
+ * Check if value is a UUID string
+ * @param {any} value
+ * @returns {boolean}
+ */
+export const isUuid = (value) => !!normalizeUuid(value)
+
+/**
+ * Validate numeric IDs (track_id, playlist_track_id, comment_id, etc.)
+ * Accepts numbers or numeric strings.
  * @param {any} id - The ID to validate
  * @returns {boolean} True if valid positive integer
  */
 export const validateId = (id) => {
-  return Number.isInteger(id) && id > 0
+  const n = typeof id === 'string' ? Number(id) : id
+  return Number.isInteger(n) && n > 0
 }
 
 /**

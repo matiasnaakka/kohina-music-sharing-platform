@@ -1,15 +1,17 @@
-import { useState, useEffect, lazy, Suspense } from 'react'
+import { useState, useEffect, lazy, Suspense, useMemo } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { supabase, getPublicStorageUrl } from '../supabaseclient'
 import NavBar from '../components/NavBar'
 import { useLikesV2 } from '../hooks/useLikesV2'
+import { normalizeUuid } from '../utils/securityUtils'
 const TrackComments = lazy(() => import('../components/TrackComments'))
 
 export default function Playlist({ session, player }) {
   const location = useLocation()
   const navigate = useNavigate()
-  const searchParams = new URLSearchParams(location.search)
-  const playlistId = searchParams.get('id')
+  const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search])
+  const rawPlaylistId = searchParams.get('id')
+  const playlistId = useMemo(() => normalizeUuid(rawPlaylistId) ?? (rawPlaylistId?.trim() || null), [rawPlaylistId])
   const [playlist, setPlaylist] = useState(null)
   const [tracks, setTracks] = useState([])
   const [loading, setLoading] = useState(true)

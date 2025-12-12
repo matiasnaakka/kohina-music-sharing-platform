@@ -10,6 +10,8 @@ const COMMENT_RATE_LIMIT_MS = 5000 // 5 seconds between comments
  * @returns {Object} Comments state and methods
  */
 export function useComments(trackId) {
+  const tid = typeof trackId === 'string' ? Number(trackId) : trackId
+
   const [comments, setComments] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
@@ -17,12 +19,12 @@ export function useComments(trackId) {
 
   // Memoize fetch to prevent unnecessary calls
   const loadComments = useCallback(async () => {
-    if (!trackId) return
+    if (!tid) return
 
     setLoading(true)
     setError(null)
     try {
-      const data = await fetchComments(trackId)
+      const data = await fetchComments(tid)
       setComments(data)
     } catch (err) {
       console.error('Load comments error:', err)
@@ -30,7 +32,7 @@ export function useComments(trackId) {
     } finally {
       setLoading(false)
     }
-  }, [trackId])
+  }, [tid])
 
   useEffect(() => {
     loadComments()
@@ -38,13 +40,13 @@ export function useComments(trackId) {
 
   // Post a comment with rate limiting
   const addComment = useCallback(async (body) => {
-    if (!trackId || !body?.trim()) {
+    if (!tid || !body?.trim()) {
       setError('Comment cannot be empty')
       return false
     }
 
     // Check rate limit
-    const rateLimitKey = `comment_${trackId}`
+    const rateLimitKey = `comment_${tid}`
     const { canProceed, remainingMs } = checkRateLimit(rateLimitKey, COMMENT_RATE_LIMIT_MS)
     
     if (!canProceed) {
@@ -55,7 +57,7 @@ export function useComments(trackId) {
     setPosting(true)
     setError(null)
     try {
-      const newComment = await postComment(trackId, body)
+      const newComment = await postComment(tid, body)
       setComments(prev => [newComment, ...prev])
       return true
     } catch (err) {
@@ -65,7 +67,7 @@ export function useComments(trackId) {
     } finally {
       setPosting(false)
     }
-  }, [trackId])
+  }, [tid])
 
   // Delete a comment
   const removeComment = useCallback(async (commentId) => {

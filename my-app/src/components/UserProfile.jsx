@@ -168,17 +168,18 @@ const UserProfile = ({ session, isModal = false, onClose, readOnly = false }) =>
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    
-    // Clear previous messages
     setError(null)
     setSuccess(null)
     setLoading(true)
-    
+
     try {
       const updates = {
         ...profile,
+        username: (profile.username ?? '').trim(),
+        bio: (profile.bio ?? '').trim(),
+        location: (profile.location ?? '').trim(),
         id: session.user.id,
-        updated_at: new Date()
+        updated_at: new Date(),
       }
       
       const { error } = await supabase
@@ -230,7 +231,7 @@ const UserProfile = ({ session, isModal = false, onClose, readOnly = false }) =>
       }
 
       if (onClose) onClose()
-      navigate('/')
+      navigate('/', { replace: true })
     } catch (err) {
       console.error('Delete profile error:', err)
       setError(err?.message || 'Failed to delete profile.')

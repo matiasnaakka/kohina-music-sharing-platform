@@ -55,7 +55,7 @@ const TrackComments = ({ trackId, session }) => {
     if (userId === session?.user?.id) {
       navigate('/profile')
     } else {
-      navigate(`/profile?user=${userId}`)
+      navigate(`/profile?user=${encodeURIComponent(userId)}`)
     }
   }
 
