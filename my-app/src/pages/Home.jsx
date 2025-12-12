@@ -1,4 +1,4 @@
-import { useState, useEffect, lazy, Suspense } from 'react'
+import { useState, useEffect, lazy, Suspense, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase, getPublicStorageUrl } from '../supabaseclient'
 import NavBar from '../components/NavBar'
@@ -20,6 +20,12 @@ export default function Home({ session, player }) {
   const [ownPlaylistsError, setOwnPlaylistsError] = useState(null)
   const { isLiked, toggleLike, loading: likesLoading, fetchLikedTracks } = useLikesV2(session?.user?.id)
   const [expandedComments, setExpandedComments] = useState(null)
+
+  // NEW: sort controls
+  const [sortField, setSortField] = useState('recent') // 'recent' | 'plays' | 'likes'
+  const [sortOrder, setSortOrder] = useState('desc') // 'desc' | 'asc'
+  const [likeCounts, setLikeCounts] = useState(new Map())
+  const [likeCountsLoading, setLikeCountsLoading] = useState(false)
 
   // Fetch tracks and genres on component mount
   useEffect(() => {
@@ -87,10 +93,37 @@ export default function Home({ session, player }) {
         .limit(50)
 
       if (error) throw error
-      
-      console.log('Tracks loaded:', data)
+
       setTracks(data || [])
       setFilteredTracks(data || [])
+
+      // NEW: fetch like counts for these tracks (for sorting by likes)
+      const ids = (data || []).map(t => t.id).filter(Boolean)
+      setLikeCountsLoading(true)
+      try {
+        if (ids.length === 0) {
+          setLikeCounts(new Map())
+        } else {
+          const { data: likesRows, error: likesErr } = await supabase
+            .from('track_likes')
+            .select('track_id')
+            .in('track_id', ids)
+
+          if (likesErr) throw likesErr
+
+          const counts = new Map()
+          for (const row of (likesRows || [])) {
+            const tid = row.track_id
+            counts.set(tid, (counts.get(tid) || 0) + 1)
+          }
+          setLikeCounts(counts)
+        }
+      } catch (e) {
+        console.warn('Failed to load like counts:', e)
+        setLikeCounts(new Map())
+      } finally {
+        setLikeCountsLoading(false)
+      }
     } catch (err) {
       console.error('Error fetching tracks:', err)
       setError('Failed to load tracks')
@@ -159,6 +192,25 @@ export default function Home({ session, player }) {
       fetchLikedTracks(trackIds)
     }
   }, [tracks, fetchLikedTracks])
+
+  // NEW: apply sorting after filtering
+  const displayedTracks = useMemo(() => {
+    const arr = [...(filteredTracks || [])]
+    const dir = sortOrder === 'asc' ? 1 : -1
+
+    const getLikes = (t) => likeCounts.get(t.id) || 0
+    const getPlays = (t) => Number(t.play_count || 0)
+    const getCreated = (t) => new Date(t.created_at || 0).getTime()
+
+    arr.sort((a, b) => {
+      if (sortField === 'likes') return (getLikes(a) - getLikes(b)) * dir
+      if (sortField === 'plays') return (getPlays(a) - getPlays(b)) * dir
+      // recent
+      return (getCreated(a) - getCreated(b)) * dir
+    })
+
+    return arr
+  }, [filteredTracks, likeCounts, sortField, sortOrder])
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -252,8 +304,45 @@ export default function Home({ session, player }) {
           </div>
         </div>
 
-        <h2 className="text-2xl font-bold mb-4 text-white">Recent Tracks</h2>
-        
+        <div className="mb-6 flex flex-col sm:flex-row gap-3 sm:items-end sm:justify-between">
+          <div>
+            <h2 className="text-2xl font-bold mb-1 text-white">Recent Tracks</h2>
+            {sortField === 'likes' && (
+              <div className="text-xs text-gray-400">
+                {likeCountsLoading ? 'Loading like counts…' : 'Sorted by like count'}
+              </div>
+            )}
+          </div>
+
+          {/* NEW: Sort controls */}
+          <div className="flex gap-2 items-center">
+            <label className="text-sm text-gray-300">
+              Sort by{' '}
+              <select
+                value={sortField}
+                onChange={(e) => setSortField(e.target.value)}
+                className="ml-2 bg-gray-800 border border-gray-700 rounded px-2 py-1 text-white"
+              >
+                <option value="recent">Recent</option>
+                <option value="plays">Listening count</option>
+                <option value="likes">Likes</option>
+              </select>
+            </label>
+
+            <label className="text-sm text-gray-300">
+              Order{' '}
+              <select
+                value={sortOrder}
+                onChange={(e) => setSortOrder(e.target.value)}
+                className="ml-2 bg-gray-800 border border-gray-700 rounded px-2 py-1 text-white"
+              >
+                <option value="desc">Top</option>
+                <option value="asc">Bottom</option>
+              </select>
+            </label>
+          </div>
+        </div>
+
         {error && (
           <div className="bg-red-500 bg-opacity-25 text-red-100 p-3 rounded mb-4">
             {error}
@@ -268,15 +357,15 @@ export default function Home({ session, player }) {
         
         {loading ? (
           <div className="text-white">Loading tracks...</div>
-        ) : filteredTracks.length === 0 ? (
+        ) : displayedTracks.length === 0 ? (
           <div className="text-white bg-gray-800 p-6 rounded">
             {selectedGenreIds.length > 0
-              ? "No tracks found for the selected genres. Try selecting different genres." 
+              ? "No tracks found for the selected genres. Try selecting different genres."
               : "No tracks available yet."}
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-4">
-            {filteredTracks.map((track, idx) => {
+            {displayedTracks.map((track, idx) => {
               const coverSrc =
                 getPublicStorageUrl('track-images', track.image_path) ||
                 track.profiles?.avatar_url ||
@@ -354,6 +443,7 @@ export default function Home({ session, player }) {
                           </span>
                           <span className="text-xs text-gray-500">
                             • 🎵 {track.play_count || 0} plays
+                            {' '}• ❤️ {likeCounts.get(track.id) || 0} likes
                           </span>
                         </div>
                       </div>
