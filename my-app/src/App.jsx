@@ -260,10 +260,10 @@ const App = () => {
           const CORE_CACHE = 'core-' + VERSION
           const RUNTIME_CACHE = 'runtime-' + VERSION
 
+          // Only cache real build assets here (SPA routes like /home are not real files)
           const CORE_ASSETS = [
             '/',
             '/index.html',
-            '/home',
             '/default-avatar.png'
           ]
 

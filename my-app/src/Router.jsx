@@ -1,8 +1,8 @@
 import './index.css'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Auth } from '@supabase/auth-ui-react'
 import { ThemeSupa } from '@supabase/auth-ui-shared'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { HashRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { supabase } from './supabaseclient'
 import Home from './pages/Home'
 import ProtectedRoute from './components/protectedRoutes'
@@ -21,6 +21,10 @@ import Playlist from './pages/Playlist'
 const Routing = ({ player }) => {
   const [session, setSession] = useState(null)
   const [loading, setLoading] = useState(true)
+
+  // Cloudflare Pages friendly: keep all app routing inside the hash.
+  const redirectToHome = useMemo(() => `${window.location.origin}/#/home`, [])
+  const redirectToReset = useMemo(() => `${window.location.origin}/#/reset-password`, [])
 
   useEffect(() => {
     // Set loading state to true while we check for an existing session
@@ -49,7 +53,7 @@ const Routing = ({ player }) => {
   }, [loading, session, player])
 
   return (
-    <BrowserRouter>
+    <HashRouter>
       <Routes>
         {/* Root route shows login when not authenticated, or redirects to /home */}
         <Route
@@ -61,7 +65,13 @@ const Routing = ({ player }) => {
               <Navigate to="/home" replace />
             ) : (
               <LoginLayout>
-                <Auth supabaseClient={supabase} appearance={{ theme: ThemeSupa }} providers={[]} />
+                <Auth
+                  supabaseClient={supabase}
+                  appearance={{ theme: ThemeSupa }}
+                  providers={[]}
+                  // Ensures external auth flows return into the SPA route on Cloudflare Pages
+                  redirectTo={redirectToHome}
+                />
               </LoginLayout>
             )
           }
@@ -72,9 +82,9 @@ const Routing = ({ player }) => {
           path="/reset-password"
           element={
             <PasswordResetForm
+              // Avoid full reload; stay within HashRouter
               onResetComplete={() => {
-                // Redirect to home or login after successful reset
-                window.location.href = '/home'
+                window.location.hash = '#/home'
               }}
             />
           }
@@ -114,7 +124,7 @@ const Routing = ({ player }) => {
           }
         />
       </Routes>
-    </BrowserRouter>
+    </HashRouter>
   )
 }
 

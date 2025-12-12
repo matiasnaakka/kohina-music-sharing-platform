@@ -35,14 +35,19 @@ if (!supabaseUrl || !supabaseAnonKey) {
  */
 export const getPublicStorageUrl = (bucket, path) => {
   if (!supabaseUrl || !path) return null
-  
-  // Validate inputs to prevent injection attacks
+
   if (typeof bucket !== 'string' || typeof path !== 'string') return null
-  
-  // Ensure no null bytes or suspicious patterns
   if (bucket.includes('\0') || path.includes('\0')) return null
-  
-  return `${supabaseUrl}/storage/v1/object/public/${encodeURIComponent(bucket)}/${encodeURIComponent(path)}`
+
+  // Encode safely but keep "/" separators intact.
+  const safeBucket = encodeURIComponent(bucket)
+  const safePath = path
+    .split('/')
+    .filter(Boolean)
+    .map(encodeURIComponent)
+    .join('/')
+
+  return `${supabaseUrl}/storage/v1/object/public/${safeBucket}/${safePath}`
 }
 
 // Create and export a single Supabase client instance
