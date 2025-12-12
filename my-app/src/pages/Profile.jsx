@@ -73,6 +73,9 @@ export default function Profile({ session, player }) {
       setPublicProfile(null)
       setPublicTracks([])
       setPublicError(null)
+      setPublicPlaylists([]) // FIX: clear public playlists when not viewing another user
+      setPublicPlaylistsError(null)
+      setPublicPlaylistsLoading(false)
       setIsFollowing(false)
       setFollowerCount(0)
       setPublicFollowingCount(0)
@@ -107,10 +110,11 @@ export default function Profile({ session, player }) {
         if (tracksError) throw tracksError
 
         setPublicPlaylistsLoading(true)
+        setPublicPlaylistsError(null)
         const { data: playlistsData, error: playlistsError } = await supabase
           .from('playlists')
           .select('id, title, description, updated_at')
-          .eq('owner', targetUserId)
+          .eq('owner', targetUserId) // FIX: only fetch this user's playlists
           .eq('is_public', true)
           .order('updated_at', { ascending: false })
         if (playlistsError) throw playlistsError
@@ -144,6 +148,7 @@ export default function Profile({ session, player }) {
           setPublicProfile(profileData)
           setPublicTracks(tracksData || [])
           setPublicPlaylists(playlistsData || [])
+          setPublicPlaylistsError(null)
           setFollowerCount(followerCountResult)
           setPublicFollowingCount(followingCountResult)
           setIsFollowing(userFollows)
@@ -152,8 +157,10 @@ export default function Profile({ session, player }) {
       } catch (err) {
         if (isMounted) {
           setPublicError(err.message)
+          setPublicPlaylistsError(err.message)
           setPublicProfile(null)
           setPublicTracks([])
+          setPublicPlaylists([])
           setIsFollowing(false)
           setFollowerCount(0)
           setPublicFollowingCount(0)
@@ -981,15 +988,15 @@ export default function Profile({ session, player }) {
                   {/* Public Playlists Sidebar */}
                   <aside className="bg-gray-900 bg-opacity-80 p-4 rounded">
                     <h4 className="text-xl font-semibold mb-3">Public playlists</h4>
-                    {ownPlaylistsLoading ? (
+                    {publicPlaylistsLoading ? (
                       <div className="text-gray-400 text-sm">Loading playlists...</div>
-                    ) : ownPlaylistsError ? (
-                      <div className="text-red-400 text-sm">{ownPlaylistsError}</div>
-                    ) : ownPlaylists.length === 0 ? (
+                    ) : publicPlaylistsError ? (
+                      <div className="text-red-400 text-sm">{publicPlaylistsError}</div>
+                    ) : publicPlaylists.length === 0 ? (
                       <div className="text-gray-400 text-sm">No public playlists yet.</div>
                     ) : (
                       <ul className="space-y-3 text-sm">
-                        {ownPlaylists.map((playlist) => (
+                        {publicPlaylists.map((playlist) => (
                           <li key={playlist.id}>
                             <Link
                               to={`/playlist?id=${playlist.id}`}
