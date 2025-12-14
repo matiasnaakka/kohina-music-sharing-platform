@@ -351,7 +351,8 @@ const UserProfile = ({ session, isModal = false, onClose, readOnly = false }) =>
               name="username"
               value={profile.username ?? ''}
               onChange={handleChange}
-              className="w-full p-2 rounded text-white"
+              placeholder="Enter your display name"
+              className="w-full p-2 rounded text-white bg-gray-800 border border-gray-600 focus:border-teal-400 focus:ring-2 focus:ring-teal-500/50"
               required
             />
           </label>
@@ -361,7 +362,8 @@ const UserProfile = ({ session, isModal = false, onClose, readOnly = false }) =>
               name="bio"
               value={profile.bio ?? ''}
               onChange={handleChange}
-              className="w-full p-2 rounded text-white"
+              placeholder="Tell others about yourself"
+              className="w-full p-2 rounded text-white bg-gray-800 border border-gray-600 focus:border-teal-400 focus:ring-2 focus:ring-teal-500/50"
               rows={3}
             />
           </label>
@@ -372,7 +374,8 @@ const UserProfile = ({ session, isModal = false, onClose, readOnly = false }) =>
               name="location"
               value={profile.location ?? ''}
               onChange={handleChange}
-              className="w-full p-2 rounded text-white"
+              placeholder="Where are you based?"
+              className="w-full p-2 rounded text-white bg-gray-800 border border-gray-600 focus:border-teal-400 focus:ring-2 focus:ring-teal-500/50"
             />
           </label>
           <button
