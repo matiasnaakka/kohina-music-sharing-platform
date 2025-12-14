@@ -626,6 +626,23 @@ export default function Profile({ session, player }) {
     }
   }
 
+  // NEW: download JSON result in-browser (only when gdprExportResult is JSON)
+  const downloadGdprJson = () => {
+    if (!gdprExportResult) return
+    const json = JSON.stringify(gdprExportResult, null, 2)
+    const blob = new Blob([json], { type: 'application/json;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'gdpr-export.json'
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+
+    URL.revokeObjectURL(url)
+  }
+
   return (
     <div className="min-h-screen bg-black text-white">
       <NavBar session={session} onSignOut={handleSignOut} />
