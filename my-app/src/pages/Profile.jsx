@@ -123,13 +123,42 @@ export default function Profile({ session, player }) {
         body: JSON.stringify({}),
       })
 
+      // Log the raw fetch result (avoid logging auth headers / signed URLs)
+      try {
+        const safeHeaders = {
+          'content-type': res.headers.get('content-type'),
+          'content-length': res.headers.get('content-length'),
+          'x-request-id': res.headers.get('x-request-id'),
+          'x-supabase-request-id': res.headers.get('x-supabase-request-id'),
+        }
+        console.debug('[gdpr-export] response', {
+          ok: res.ok,
+          status: res.status,
+          statusText: res.statusText,
+          url: res.url,
+          headers: safeHeaders,
+        })
+      } catch {
+        // ignore logging errors
+      }
+
       if (!res.ok) {
         const text = await res.text().catch(() => '')
+        console.debug('[gdpr-export] error body', text)
         throw new Error(text || `Export failed (${res.status})`)
       }
 
       // gdpr-export returns JSON: { ok: true, manifest, expires_in }
       const payload = await res.json().catch(() => null)
+
+      // Log a safe summary (do not log signed URLs)
+      console.debug('[gdpr-export] payload summary', {
+        ok: payload?.ok,
+        expires_in: payload?.expires_in,
+        fileCount: payload?.manifest?.files?.length ?? 0,
+        fileNames: (payload?.manifest?.files || []).map((f) => f?.name).filter(Boolean),
+      })
+
       if (!payload?.ok) throw new Error(payload?.error || 'Export error')
 
       setExportManifest(payload.manifest || null)
