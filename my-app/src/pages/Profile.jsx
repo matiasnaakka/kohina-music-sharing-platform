@@ -1173,15 +1173,6 @@ export default function Profile({ session, player }) {
           )}
         </div>
       )}
-
-      {/* DELETE this entire old inline follow modal block (duplicate + error-prone) */}
-      {/*
-      {followModal.open && (
-        <div className="fixed inset-0 ...">
-          ...existing code...
-        </div>
-      )}
-      */}
     </div>
   )
 }
