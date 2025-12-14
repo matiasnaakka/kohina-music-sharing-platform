@@ -188,7 +188,7 @@ const TrackComments = ({ trackId, session }) => {
                       </div>
                     </div>
                   ) : (
-                    <p className="text-gray-200 mt-2 break-words whitespace-pre-wrap">
+                    <p className="text-gray-200 mt-2 wrap-break-word whitespace-pre-wrap">
                       {comment.body}
                     </p>
                   )}

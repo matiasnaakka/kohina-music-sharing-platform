@@ -279,11 +279,18 @@ export default function Upload({ session, player }) {
   const handleTrackCoverUpload = async (trackId, existingPath, event) => {
     const coverFile = event.target.files?.[0]
     if (!coverFile) return
-    if (!coverFile.type.startsWith('image/')) {
-      setError('Cover must be an image file')
+
+    const v = validateFileUpload(coverFile, {
+      maxSizeMB: 5,
+      allowedTypes: ['image/jpeg', 'image/png', 'image/webp', 'image/gif'],
+      allowedExtensions: ['.jpg', '.jpeg', '.png', '.webp', '.gif'],
+    })
+    if (!v.isValid) {
+      setError(v.error)
       event.target.value = ''
       return
     }
+
     setImageProcessingTrackId(trackId)
     setError(null)
     setSuccess(null)
