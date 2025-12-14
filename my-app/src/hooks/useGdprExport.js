@@ -19,6 +19,12 @@ const getFunctionsBaseUrl = () => {
   return `${base}/functions/v1`
 }
 
+const getAnonKey = () => {
+  const key = import.meta.env.VITE_SUPABASE_ANON_KEY || ''
+  if (!key) throw new Error('Missing Supabase anon key (VITE_SUPABASE_ANON_KEY).')
+  return key
+}
+
 const parseFilenameFromContentDisposition = (cd) => {
   if (!cd) return null
   const m = /filename\*?=(?:UTF-8'')?["']?([^"';]+)["']?/i.exec(cd)
@@ -73,7 +79,9 @@ export function useGdprExport(session) {
 
     try {
       const token = await getFreshAccessToken()
+      const anonKey = getAnonKey()
 
+      if (!token) throw new Error('Missing access token.')
       if (import.meta.env.DEV) {
         console.debug('[GDPR export] token meta', {
           len: token?.length || 0,
@@ -88,8 +96,10 @@ export function useGdprExport(session) {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
+          apikey: anonKey,
           'Content-Type': 'application/json',
           Accept: 'application/json, application/octet-stream, application/gzip, */*',
+          'X-Client-Info': 'gdpr-export-client',
         },
         body: JSON.stringify({}),
       })

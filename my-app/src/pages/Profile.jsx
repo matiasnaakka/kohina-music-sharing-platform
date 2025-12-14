@@ -9,6 +9,11 @@ import { useLikesV2 } from '../hooks/useLikesV2'
 import { normalizeUuid } from '../utils/securityUtils'
 import FollowModal from '../components/FollowModal'
 import GdprExportPanel from '../components/GdprExportPanel'
+import ProfileHeader from '../components/ProfileHeader'
+import TracksList from '../components/TracksList'
+import SidebarPlaylists from '../components/SidebarPlaylists'
+import SidebarLikedTracks from '../components/SidebarLikedTracks'
+import ProfileSettingsModal from '../components/ProfileSettingsModal'
 
 export default function Profile({ session, player }) {
   const location = useLocation()
@@ -490,7 +495,6 @@ export default function Profile({ session, player }) {
       <NavBar session={session} onSignOut={handleSignOut} />
       {isOwnProfile ? (
         <>
-          {/* Unified header + tracks container (same as public layout) */}
           <div className="max-w-4xl mx-auto mt-16 p-6 bg-black bg-opacity-80 rounded-lg text-white pb-32 md:pb-6">
             {ownHeaderLoading ? (
               <div>Loading profile...</div>
@@ -500,342 +504,62 @@ export default function Profile({ session, player }) {
               <div className="text-gray-300">Profile not found.</div>
             ) : (
               <>
-                <div className="flex flex-col md:flex-row items-start gap-4 mb-6">
-                  <img
-                    src={ownProfile.avatar_url || '/default-avatar.png'}
-                    alt={`${ownProfile.username}'s avatar`}
-                    className="w-24 h-24 object-cover"
-                    width="96"
-                    height="96"
-                    decoding="async"
-                    loading="lazy"
-                    onError={(e) => { e.target.src = '/default-avatar.png' }}
-                  />
-                  <div className="flex-1">
-                    <h2 className="text-3xl font-bold mb-1">{ownProfile.username}</h2>
-                    {ownProfile.location && (
-                      <p className="text-sm text-gray-300 mb-2">{ownProfile.location}</p>
-                    )}
-                    {ownProfile.bio && (
-                      <p className="text-gray-200 whitespace-pre-line">{ownProfile.bio}</p>
-                    )}
-                  </div>
-                  <div className="flex flex-col items-start md:items-end gap-2 md:ml-auto">
-                    <button
-                      onClick={() => setShowSettings(true)}
-                      className="px-4 py-2 rounded font-semibold bg-cyan-500 text-white hover:bg-cyan-700"
-                    >
-                      Profile settings
-                    </button>
-                    <span className="text-xl text-gray-400 space-x-2">
-                      <button
-                        type="button"
-                        onClick={() => openFollowModal('followers', session?.user?.id)}
-                        className="hover:text-white underline-offset-2 hover:underline"
-                      >
-                        {ownFollowerCount === 1 ? '1 follower' : `${ownFollowerCount} followers`}
-                      </button>
-                      <span>•</span>
-                      <button
-                        type="button"
-                        onClick={() => openFollowModal('following', session?.user?.id)}
-                        className="hover:text-white underline-offset-2 hover:underline"
-                      >
-                        Following {ownFollowingCount}
-                      </button>
-                    </span>
-                  </div>
-                </div>
-
+                <ProfileHeader
+                  profile={ownProfile}
+                  isOwn
+                  followerCount={ownFollowerCount}
+                  followingCount={ownFollowingCount}
+                  onFollowersClick={() => openFollowModal('followers', session?.user?.id)}
+                  onFollowingClick={() => openFollowModal('following', session?.user?.id)}
+                  onEditProfile={() => setShowSettings(true)}
+                />
                 <h3 className="text-2xl font-bold mb-4">Tracks</h3>
                 <div className="flex flex-col lg:flex-row gap-6">
                   <div className="flex-1">
-                    {ownTracksLoading ? (
-                      <div>Loading your tracks...</div>
-                    ) : ownTracksError ? (
-                      <div className="bg-red-500 bg-opacity-25 text-red-100 p-3 rounded">
-                        {ownTracksError}
-                      </div>
-                    ) : ownTracks.length === 0 ? (
-                      <div className="text-gray-300 bg-gray-800 p-4 rounded">
-                        You haven't uploaded any tracks yet.
-                      </div>
-                    ) : (
-                      <div className="grid grid-cols-1 gap-4">
-                        {ownTracks.map((track, idx) => {
-                          const coverSrc =
-                            getPublicStorageUrl('track-images', track.image_path) ||
-                            ownProfile?.avatar_url ||
-                            '/default-avatar.png'
-                          const isActive = player?.currentTrack?.id === track.id
-                          const isBusy = isActive && player?.loading
-                          const canPlay = Boolean(track.audio_path)
-                          const playbackLabel = isActive
-                            ? isBusy
-                              ? 'Loading...'
-                              : player?.isPlaying
-                                ? 'Pause'
-                                : 'Resume'
-                            : 'Play'
-                          const handlePlayback = () => {
-                            if (!player || !canPlay) return
-                            if (isActive) {
-                              player.isPlaying ? player.pause() : player.resume()
-                            } else {
-                              player.playTrack(track)
-                            }
-                          }
-                          const trackIsLiked = isOwnTrackLiked(track.id)
-                          return (
-                            <div key={track.id}>
-                              <div className="bg-gray-800 bg-opacity-80 p-4 rounded text-white flex gap-4">
-                                <img
-                                  src={coverSrc}
-                                  alt={`${track.title} cover`}
-                                  className="w-24 h-24 object-cover rounded"
-                                  width="96"
-                                  height="96"
-                                  decoding="async"
-                                  fetchpriority={idx === 0 ? 'high' : undefined}
-                                  loading={idx === 0 ? 'eager' : 'lazy'}
-                                  onError={(e) => { e.target.src = ownProfile?.avatar_url || '/default-avatar.png' }}
-                                />
-                                <div className="flex flex-col md:flex-row justify-between flex-1">
-                                  <div>
-                                    <h4 className="font-bold text-lg">{track.title}</h4>
-                                    <p className="text-gray-300">
-                                      {track.artist} {track.album ? `• ${track.album}` : ''}
-                                    </p>
-                                    <div className="flex gap-2 items-center mt-1 flex-wrap">
-                                      <span className="bg-gray-700 px-2 py-0.5 text-xs rounded">
-                                        {track.genres ? track.genres.name : 'No genre'}
-                                      </span>
-                                      <span className="bg-gray-700 px-2 py-0.5 text-xs rounded">
-                                        {track.is_public ? 'Public' : 'Private'}
-                                      </span>
-                                      <span className="text-xs text-gray-400">
-                                        {formatDate(track.created_at)}
-                                      </span>
-                                      <span className="text-xs text-gray-500">
-                                        • 🎵 {track.play_count || 0} plays
-                                      </span>
-                                    </div>
-                                  </div>
-                                  <div className="shrink-0 min-w-[200px] flex items-center gap-2 mt-3 md:mt-0 flex-wrap">
-                                    {canPlay ? (
-                                      <>
-                                        <button
-                                          type="button"
-                                          onClick={handlePlayback}
-                                          disabled={isBusy}
-                                          className="bg-teal-500 text-black px-3 py-1 rounded text-sm font-semibold hover:bg-teal-400 disabled:opacity-60"
-                                        >
-                                          {playbackLabel}
-                                        </button>
-                                        {isActive && player?.error && !player.loading && (
-                                          <span className="max-w-[140px] truncate text-xs text-red-400">
-                                            {player.error}
-                                          </span>
-                                        )}
-                                      </>
-                                    ) : (
-                                      <span className="text-red-400">Audio unavailable</span>
-                                    )}
-                                    <button
-                                      type="button"
-                                      onClick={() => toggleOwnTrackLike(track.id)}
-                                      className={`px-2 py-1 rounded text-sm font-semibold transition ${
-                                        trackIsLiked
-                                          ? 'bg-red-500 text-white hover:bg-red-400'
-                                          : 'bg-gray-700 text-white hover:bg-gray-600'
-                                      }`}
-                                    >
-                                      {trackIsLiked ? '❤️ Liked' : '🤍 Like'}
-                                    </button>
-                                    <Suspense fallback={null}>
-                                      <AddToPlaylist session={session} track={track} />
-                                    </Suspense>
-                                  </div>
-                                </div>
-                              </div>
-
-                              {/* Comments section */}
-                              {expandedComments === track.id && (
-                                <div className="bg-gray-900 p-4 rounded-b mt-0 border-t border-gray-700">
-                                  <Suspense fallback={<div className="text-gray-400 text-sm">Loading comments…</div>}>
-                                    <TrackComments trackId={track.id} session={session} />
-                                  </Suspense>
-                                </div>
-                              )}
-
-                              {/* Comments toggle button */}
-                              <button
-                                type="button"
-                                onClick={() => setExpandedComments(expandedComments === track.id ? null : track.id)}
-                                className="text-xs text-blue-400 hover:underline mt-2 block"
-                              >
-                                {expandedComments === track.id ? 'Hide comments' : 'View comments'}
-                              </button>
-                            </div>
-                          )
-                        })}
-                      </div>
-                    )}
+                    <TracksList
+                      tracks={ownTracks}
+                      loading={ownTracksLoading}
+                      error={ownTracksError}
+                      profileAvatar={ownProfile?.avatar_url}
+                      player={player}
+                      session={session}
+                      isOwn
+                      formatDate={formatDate}
+                      expandedComments={expandedComments}
+                      onToggleComments={(id) => setExpandedComments(id === expandedComments ? null : id)}
+                      isTrackLiked={isOwnTrackLiked}
+                      onToggleLike={toggleOwnTrackLike}
+                      emptyMessage="You haven't uploaded any tracks yet."
+                    />
                   </div>
                   <div className="lg:w-72 space-y-6">
-                    {/* Public Playlists Sidebar */}
-                    <aside className="bg-gray-900 bg-opacity-80 p-4 rounded">
-                      <h4 className="text-xl font-semibold mb-3">Public playlists</h4>
-                      {ownPlaylistsLoading ? (
-                        <div className="text-gray-400 text-sm">Loading playlists...</div>
-                      ) : ownPlaylistsError ? (
-                        <div className="text-red-400 text-sm">{ownPlaylistsError}</div>
-                      ) : ownPlaylists.length === 0 ? (
-                        <div className="text-gray-400 text-sm">No public playlists yet.</div>
-                      ) : (
-                        <ul className="space-y-3 text-sm">
-                          {ownPlaylists.map((playlist) => (
-                            <li key={playlist.id}>
-                              <Link
-                                to={`/playlist?id=${playlist.id}`}
-                                className="block bg-gray-800 hover:bg-gray-700 px-3 py-2 rounded transition"
-                              >
-                                <p className="text-white font-semibold">{playlist.title}</p>
-                                {playlist.description && (
-                                  <p className="text-gray-400 text-xs mt-1 line-clamp-2">{playlist.description}</p>
-                                )}
-                                <p className="text-gray-500 text-xs mt-1">
-                                  Updated {new Date(playlist.updated_at).toLocaleDateString()}
-                                </p>
-                              </Link>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </aside>
-
-                    {/* Liked Tracks Sidebar */}
-                    <aside className="bg-gray-900 bg-opacity-80 p-4 rounded">
-                      <h4 className="text-xl font-semibold mb-3">Liked Tracks</h4>
-                      {likedTracksLoading ? (
-                        <div className="text-gray-400 text-sm">Loading...</div>
-                      ) : likedTracksError ? (
-                        <div className="text-red-400 text-sm">{likedTracksError}</div>
-                      ) : likedTracks.length === 0 ? (
-                        <div className="text-gray-400 text-sm">No liked tracks yet.</div>
-                      ) : (
-                        <div className="max-h-96 overflow-y-auto space-y-2">
-                          {likedTracks.map((track) => {
-                            const coverSrc =
-                              getPublicStorageUrl('track-images', track.image_path) ||
-                              track.profiles?.avatar_url ||
-                              '/default-avatar.png'
-                            const isActive = player?.currentTrack?.id === track.id
-                            const isBusy = isActive && player?.loading
-                            const canPlay = Boolean(track.audio_path)
-                            const playbackLabel = isActive
-                              ? isBusy
-                                ? 'Loading...'
-                                : player?.isPlaying
-                                  ? 'Pause'
-                                  : 'Resume'
-                              : 'Play'
-                            const handlePlayback = () => {
-                              if (!player || !canPlay) return
-                              if (isActive) {
-                                player.isPlaying ? player.pause() : player.resume()
-                              } else {
-                                player.playTrack(track)
-                              }
-                            }
-                            const trackIsLiked = isLikedTrackLiked(track.id)
-                            return (
-                              <div key={track.id} className="bg-gray-800 bg-opacity-60 p-2 rounded hover:bg-opacity-80 transition text-xs">
-                                <div className="flex gap-2 mb-1">
-                                  <img
-                                    src={coverSrc}
-                                    alt={`${track.title} cover`}
-                                    className="w-12 h-12 object-cover rounded shrink-0"
-                                    width="48"
-                                    height="48"
-                                    decoding="async"
-                                    loading="lazy"
-                                    onError={(e) => { e.target.src = track.profiles?.avatar_url || '/default-avatar.png' }}
-                                  />
-                                  <div className="min-w-0 flex-1">
-                                    <h5 className="font-semibold truncate">{track.title}</h5>
-                                    <p className="text-gray-400 truncate">{track.artist}</p>
-                                    <Link
-                                      to={`/profile?user=${track.user_id}`}
-                                      className="text-gray-500 hover:text-teal-300 truncate text-xs underline"
-                                    >
-                                      {track.profiles?.username || 'Anonymous'}
-                                    </Link>
-                                    <p className="text-gray-500 text-xs mt-1">
-                                      🎵 {track.play_count || 0} plays
-                                    </p>
-                                  </div>
-                                </div>
-                                <div className="flex items-center gap-1 flex-wrap">
-                                  {canPlay ? (
-                                    <button
-                                      type="button"
-                                      onClick={handlePlayback}
-                                      disabled={isBusy}
-                                      className="bg-teal-500 text-black px-1.5 py-0.5 rounded text-xs font-semibold hover:bg-teal-400 disabled:opacity-60"
-                                    >
-                                      {playbackLabel}
-                                    </button>
-                                  ) : (
-                                    <span className="text-red-400 text-xs">No audio</span>
-                                  )}
-                                  <button
-                                    type="button"
-                                    onClick={() => toggleLikedTrackLike(track.id)}
-                                    className={`px-1 py-0.5 rounded text-xs transition ${
-                                      trackIsLiked
-                                        ? 'bg-red-500 text-white hover:bg-red-400'
-                                        : 'bg-gray-700 text-white hover:bg-gray-600'
-                                    }`}
-                                  >
-                                    {trackIsLiked ? '❤️' : '🤍'}
-                                  </button>
-                                  <Suspense fallback={null}>
-                                    <AddToPlaylist session={session} track={track} />
-                                  </Suspense>
-                                </div>
-                              </div>
-                            )
-                          })}
-                        </div>
-                      )}
-                    </aside>
+                    <SidebarPlaylists
+                      title="Public playlists"
+                      playlists={ownPlaylists}
+                      loading={ownPlaylistsLoading}
+                      error={ownPlaylistsError}
+                    />
+                    <SidebarLikedTracks
+                      tracks={likedTracks}
+                      loading={likedTracksLoading}
+                      error={likedTracksError}
+                      player={player}
+                      session={session}
+                      isTrackLiked={isLikedTrackLiked}
+                      onToggleLike={toggleLikedTrackLike}
+                    />
                   </div>
                 </div>
               </>
             )}
           </div>
 
-          {/* Settings Modal (editable) */}
-          {showSettings && (
-            <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
-              <div className="w-full max-w-lg mx-4 space-y-4">
-                {/* UserProfile component for editable settings */}
-                <UserProfile
-                  session={session}
-                  isModal
-                  onClose={() => {
-                    setShowSettings(false)
-                  }}
-                />
+          <ProfileSettingsModal
+            open={showSettings}
+            session={session}
+            onClose={() => setShowSettings(false)}
+          />
 
-                {/* REPLACE: inline GDPR panel with component */}
-                <GdprExportPanel session={session} />
-              </div>
-            </div>
-          )}
-
-          {/* REPLACE: inline follow modal markup with component */}
           <FollowModal
             open={followModal.open}
             type={followModal.type}
@@ -855,321 +579,57 @@ export default function Profile({ session, player }) {
           ) : !publicProfile ? (
             <div className="text-gray-300">Profile not found.</div>
           ) : (
-            <div>
-              <div className="flex flex-col md:flex-row items-start gap-4 mb-6">
-                <img
-                  src={publicProfile.avatar_url || '/default-avatar.png'}
-                  alt={`${publicProfile.username}'s avatar`}
-                  className="w-24 h-24 object-cover"
-                  width="96"
-                  height="96"
-                  decoding="async"
-                  loading="lazy"
-                  onError={(e) => { e.target.src = '/default-avatar.png' }}
-                />
-                <div className="flex-1">
-                  <h2 className="text-3xl font-bold mb-1">{publicProfile.username}</h2>
-                  {publicProfile.location && (
-                    <p className="text-sm text-gray-300 mb-2">{publicProfile.location}</p>
-                  )}
-                  {publicProfile.bio && (
-                    <p className="text-gray-200 whitespace-pre-line">{publicProfile.bio}</p>
-                  )}
-                </div>
-                <div className="flex flex-col items-start md:items-end gap-2 md:ml-auto">
-                  <button
-                    onClick={handleFollowToggle}
-                    disabled={followLoading}
-                    className={`px-4 py-2 rounded-2xl font-semibold transition ${
-                      followLoading ? 'opacity-70 cursor-not-allowed' : ''
-                    } ${
-                      isFollowing
-                        ? 'bg-gray-700 text-white hover:bg-gray-600'
-                        : 'bg-amber-500 text-white hover:bg-amber-300'
-                    }`}
-                  >
-                    {followLoading ? 'Processing...' : isFollowing ? 'Unfollow' : 'Follow'}
-                  </button>
-                  <span className="text-2xl text-gray-400 space-x-2">
-                    <button
-                      type="button"
-                      onClick={() => openFollowModal('followers', targetUserId)}
-                      className="hover:text-white underline-offset-2 hover:underline"
-                    >
-                      {followerCount === 1 ? '1 follower' : `${followerCount} followers`}
-                    </button>
-                    <span>•</span>
-                    <button
-                      type="button"
-                      onClick={() => openFollowModal('following', targetUserId)}
-                      className="hover:text-white underline-offset-2 hover:underline"
-                    >
-                      Following {publicFollowingCount}
-                    </button>
-                  </span>
-                  {followError && (
-                    <span className="text-2xl text-red-400">{followError}</span>
-                  )}
-                </div>
-              </div>
-
+            <>
+              <ProfileHeader
+                profile={publicProfile}
+                isOwn={false}
+                followerCount={followerCount}
+                followingCount={publicFollowingCount}
+                onFollowersClick={() => openFollowModal('followers', targetUserId)}
+                onFollowingClick={() => openFollowModal('following', targetUserId)}
+                onFollowToggle={handleFollowToggle}
+                followLoading={followLoading}
+                isFollowing={isFollowing}
+                followError={followError}
+              />
               <h3 className="text-2xl font-bold mb-4">Tracks</h3>
               <div className="flex flex-col lg:flex-row gap-6">
                 <div className="flex-1">
-                  {publicTracks.length === 0 ? (
-                    <div className="text-gray-300 bg-gray-800 p-4 rounded">
-                      No public tracks yet.
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-1 gap-4">
-                      {publicTracks.map((track, idx) => {
-                        const coverSrc =
-                          getPublicStorageUrl('track-images', track.image_path) ||
-                          publicProfile?.avatar_url ||
-                          '/default-avatar.png'
-                        const isActive = player?.currentTrack?.id === track.id
-                        const isBusy = isActive && player?.loading
-                        const canPlay = Boolean(track.audio_path)
-                        const playbackLabel = isActive
-                          ? isBusy
-                            ? 'Loading...'
-                            : player?.isPlaying
-                              ? 'Pause'
-                              : 'Resume'
-                          : 'Play'
-                        const handlePlayback = () => {
-                          if (!player || !canPlay) return
-                          if (isActive) {
-                            player.isPlaying ? player.pause() : player.resume()
-                          } else {
-                            player.playTrack(track)
-                          }
-                        }
-                        const trackIsLiked = isPublicTrackLiked(track.id)
-                        return (
-                          <div key={track.id}>
-                            <div className="bg-gray-800 bg-opacity-80 p-4 rounded text-white flex gap-4">
-                              <img
-                                src={coverSrc}
-                                alt={`${track.title} cover`}
-                                className="w-24 h-24 object-cover rounded"
-                                width="96"
-                                height="96"
-                                decoding="async"
-                                fetchpriority={idx === 0 ? 'high' : undefined}
-                                loading={idx === 0 ? 'eager' : 'lazy'}
-                                onError={(e) => { e.target.src = publicProfile?.avatar_url || '/default-avatar.png' }}
-                              />
-                              <div className="flex flex-col md:flex-row justify-between flex-1">
-                                <div>
-                                  <h4 className="font-bold text-lg">{track.title}</h4>
-                                  <p className="text-gray-300">
-                                    {track.artist} {track.album ? `• ${track.album}` : ''}
-                                  </p>
-                                  <div className="flex gap-2 items-center mt-1">
-                                    <span className="bg-gray-700 px-2 py-0.5 text-xs rounded">
-                                      {track.genres ? track.genres.name : 'No genre'}
-                                    </span>
-                                    <span className="text-xs text-gray-400">
-                                      {formatDate(track.created_at)}
-                                    </span>
-                                    <span className="text-xs text-gray-500">
-                                      • 🎵 {track.play_count || 0} plays
-                                    </span>
-                                  </div>
-                                </div>
-                                <div className="shrink-0 min-w-[200px] flex items-center gap-2 mt-3 md:mt-0 flex-wrap">
-                                  {canPlay ? (
-                                    <>
-                                      <button
-                                        type="button"
-                                        onClick={handlePlayback}
-                                        disabled={isBusy}
-                                        className="bg-teal-500 text-black px-3 py-1 rounded text-sm font-semibold hover:bg-teal-400 disabled:opacity-60"
-                                      >
-                                        {playbackLabel}
-                                      </button>
-                                      {isActive && player?.error && !player.loading && (
-                                        <span className="max-w-[140px] truncate text-xs text-red-400">
-                                          {player.error}
-                                        </span>
-                                      )}
-                                    </>
-                                  ) : (
-                                    <span className="text-red-400">Audio unavailable</span>
-                                  )}
-                                  <button
-                                    type="button"
-                                    onClick={() => togglePublicTrackLike(track.id)}
-                                    className={`px-2 py-1 rounded text-sm font-semibold transition ${
-                                      trackIsLiked
-                                        ? 'bg-red-500 text-white hover:bg-red-400'
-                                        : 'bg-gray-700 text-white hover:bg-gray-600'
-                                    }`}
-                                  >
-                                    {trackIsLiked ? '❤️ Liked' : '🤍 Like'}
-                                  </button>
-                                  <Suspense fallback={null}>
-                                    <AddToPlaylist session={session} track={track} />
-                                  </Suspense>
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* Comments section */}
-                            {expandedComments === track.id && (
-                              <div className="bg-gray-900 p-4 rounded-b mt-0 border-t border-gray-700">
-                                <Suspense fallback={<div className="text-gray-400 text-sm">Loading comments…</div>}>
-                                  <TrackComments trackId={track.id} session={session} />
-                                </Suspense>
-                              </div>
-                            )}
-
-                            {/* Comments toggle button */}
-                            <button
-                              type="button"
-                              onClick={() => setExpandedComments(expandedComments === track.id ? null : track.id)}
-                              className="text-xs text-blue-400 hover:underline mt-2 block"
-                            >
-                              {expandedComments === track.id ? 'Hide comments' : 'View comments'}
-                            </button>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  )}
+                  <TracksList
+                    tracks={publicTracks}
+                    loading={false}
+                    error={null}
+                    profileAvatar={publicProfile?.avatar_url}
+                    player={player}
+                    session={session}
+                    isOwn={false}
+                    formatDate={formatDate}
+                    expandedComments={expandedComments}
+                    onToggleComments={(id) => setExpandedComments(id === expandedComments ? null : id)}
+                    isTrackLiked={isPublicTrackLiked}
+                    onToggleLike={togglePublicTrackLike}
+                    emptyMessage="No public tracks yet."
+                  />
                 </div>
                 <div className="lg:w-72 space-y-6">
-                  {/* Public Playlists Sidebar */}
-                  <aside className="bg-gray-900 bg-opacity-80 p-4 rounded">
-                    <h4 className="text-xl font-semibold mb-3">Public playlists</h4>
-                    {publicPlaylistsLoading ? (
-                      <div className="text-gray-400 text-sm">Loading playlists...</div>
-                    ) : publicPlaylistsError ? (
-                      <div className="text-red-400 text-sm">{publicPlaylistsError}</div>
-                    ) : publicPlaylists.length === 0 ? (
-                      <div className="text-gray-400 text-sm">No public playlists yet.</div>
-                    ) : (
-                      <ul className="space-y-3 text-sm">
-                        {publicPlaylists.map((playlist) => (
-                          <li key={playlist.id}>
-                            <Link
-                              to={`/playlist?id=${playlist.id}`}
-                              className="block bg-gray-800 hover:bg-gray-700 px-3 py-2 rounded transition"
-                            >
-                              <p className="text-white font-semibold">{playlist.title}</p>
-                              {playlist.description && (
-                                <p className="text-gray-400 text-xs mt-1 line-clamp-2">{playlist.description}</p>
-                              )}
-                              <p className="text-gray-500 text-xs mt-1">
-                                Updated {new Date(playlist.updated_at).toLocaleDateString()}
-                              </p>
-                            </Link>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </aside>
-
-                  {/* Liked Tracks Sidebar */}
-                  <aside className="bg-gray-900 bg-opacity-80 p-4 rounded">
-                    <h4 className="text-xl font-semibold mb-3">Liked Tracks</h4>
-                    {likedTracksLoading ? (
-                      <div className="text-gray-400 text-sm">Loading...</div>
-                    ) : likedTracksError ? (
-                      <div className="text-red-400 text-sm">{likedTracksError}</div>
-                    ) : likedTracks.length === 0 ? (
-                      <div className="text-gray-400 text-sm">No liked tracks yet.</div>
-                    ) : (
-                      <div className="max-h-96 overflow-y-auto space-y-2">
-                        {likedTracks.map((track) => {
-                          const coverSrc =
-                            getPublicStorageUrl('track-images', track.image_path) ||
-                            track.profiles?.avatar_url ||
-                            '/default-avatar.png'
-                          const isActive = player?.currentTrack?.id === track.id
-                          const isBusy = isActive && player?.loading
-                          const canPlay = Boolean(track.audio_path)
-                          const playbackLabel = isActive
-                            ? isBusy
-                              ? 'Loading...'
-                              : player?.isPlaying
-                                ? 'Pause'
-                                : 'Resume'
-                            : 'Play'
-                          const handlePlayback = () => {
-                            if (!player || !canPlay) return
-                            if (isActive) {
-                              player.isPlaying ? player.pause() : player.resume()
-                            } else {
-                              player.playTrack(track)
-                            }
-                          }
-                          const trackIsLiked = isLikedTrackLiked(track.id)
-                          return (
-                            <div key={track.id} className="bg-gray-800 bg-opacity-60 p-2 rounded hover:bg-opacity-80 transition text-xs">
-                              <div className="flex gap-2 mb-1">
-                                <img
-                                  src={coverSrc}
-                                  alt={`${track.title} cover`}
-                                  className="w-12 h-12 object-cover rounded shrink-0"
-                                  width="48"
-                                  height="48"
-                                  decoding="async"
-                                  loading="lazy"
-                                  onError={(e) => { e.target.src = track.profiles?.avatar_url || '/default-avatar.png' }}
-                                />
-                                <div className="min-w-0 flex-1">
-                                  <h5 className="font-semibold truncate">{track.title}</h5>
-                                  <p className="text-gray-400 truncate">{track.artist}</p>
-                                  <Link
-                                    to={`/profile?user=${track.user_id}`}
-                                    className="text-gray-500 hover:text-teal-300 truncate text-xs underline"
-                                  >
-                                    {track.profiles?.username || 'Anonymous'}
-                                  </Link>
-                                  <p className="text-gray-500 text-xs mt-1">
-                                    🎵 {track.play_count || 0} plays
-                                  </p>
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-1 flex-wrap">
-                                {canPlay ? (
-                                  <button
-                                    type="button"
-                                    onClick={handlePlayback}
-                                    disabled={isBusy}
-                                    className="bg-teal-500 text-black px-1.5 py-0.5 rounded text-xs font-semibold hover:bg-teal-400 disabled:opacity-60"
-                                  >
-                                    {playbackLabel}
-                                  </button>
-                                ) : (
-                                  <span className="text-red-400 text-xs">No audio</span>
-                                )}
-                                <button
-                                  type="button"
-                                  onClick={() => toggleLikedTrackLike(track.id)}
-                                  className={`px-1 py-0.5 rounded text-xs transition ${
-                                    trackIsLiked
-                                      ? 'bg-red-500 text-white hover:bg-red-400'
-                                      : 'bg-gray-700 text-white hover:bg-gray-600'
-                                  }`}
-                                >
-                                  {trackIsLiked ? '❤️' : '🤍'}
-                                </button>
-                                <Suspense fallback={null}>
-                                  <AddToPlaylist session={session} track={track} />
-                                </Suspense>
-                              </div>
-                            </div>
-                          )
-                        })}
-                      </div>
-                    )}
-                  </aside>
+                  <SidebarPlaylists
+                    title="Public playlists"
+                    playlists={publicPlaylists}
+                    loading={publicPlaylistsLoading}
+                    error={publicPlaylistsError}
+                  />
+                  <SidebarLikedTracks
+                    tracks={likedTracks}
+                    loading={likedTracksLoading}
+                    error={likedTracksError}
+                    player={player}
+                    session={session}
+                    isTrackLiked={isLikedTrackLiked}
+                    onToggleLike={toggleLikedTrackLike}
+                  />
                 </div>
               </div>
-            </div>
+            </>
           )}
         </div>
       )}
