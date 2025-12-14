@@ -1411,7 +1411,7 @@ export default function Profile({ session, player }) {
               ) : followModalUsers.length === 0 ? (
                 <div className="text-sm text-gray-400">No users found.</div>
               ) : (
-                <ul className="max-h-96 overflow-y-auto space-y-2"></ul>
+                <ul className="max-h-96 overflow-y-auto space-y-2">
                   {followModalUsers.map((u) => (
                     <li key={u.id}>
                       <button
