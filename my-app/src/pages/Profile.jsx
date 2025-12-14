@@ -7,6 +7,8 @@ const AddToPlaylist = lazy(() => import('../components/AddToPlaylist'))
 const TrackComments = lazy(() => import('../components/TrackComments'))
 import { useLikesV2 } from '../hooks/useLikesV2'
 import { normalizeUuid } from '../utils/securityUtils'
+import FollowModal from '../components/FollowModal'
+import GdprExportPanel from '../components/GdprExportPanel'
 
 export default function Profile({ session, player }) {
   const location = useLocation()
@@ -60,12 +62,6 @@ export default function Profile({ session, player }) {
 
   // NEW: Comments expansion state
   const [expandedComments, setExpandedComments] = useState(null)
-
-  // NEW: GDPR export state
-  const [gdprExportLoading, setGdprExportLoading] = useState(false)
-  const [gdprExportError, setGdprExportError] = useState(null)
-  const [gdprExportResult, setGdprExportResult] = useState(null)
-  const [gdprExportDownloadInfo, setGdprExportDownloadInfo] = useState(null) // NEW
 
   const handleSignOut = async () => {
     await supabase.auth.signOut()
@@ -489,160 +485,6 @@ export default function Profile({ session, player }) {
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [followModal.open]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // NEW: minimal JWT helpers (safe logging only)
-  const isJwtLike = (token) => typeof token === 'string' && token.split('.').length === 3
-  const tryGetJwtExpIso = (token) => {
-    try {
-      if (!isJwtLike(token)) return null
-      const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')
-      const json = JSON.parse(atob(base64))
-      return json?.exp ? new Date(json.exp * 1000).toISOString() : null
-    } catch {
-      return null
-    }
-  }
-
-  // NEW: keep auth token fresh-ish (edge function requires unexpired access token)
-  const getFreshAccessToken = async () => {
-    const { data: s1, error: e1 } = await supabase.auth.getSession()
-    if (e1) throw e1
-    let current = s1?.session
-
-    if (!current) throw new Error('Not authenticated.')
-
-    const expiresAtMs = (current.expires_at || 0) * 1000
-    const shouldRefresh = expiresAtMs && expiresAtMs < Date.now() + 30_000
-    if (shouldRefresh) {
-      const { data: s2, error: e2 } = await supabase.auth.refreshSession()
-      if (e2) throw e2
-      current = s2?.session || current
-    }
-
-    if (!current?.access_token) throw new Error('Missing access token.')
-    return current.access_token
-  }
-
-  // NEW: functions base URL helper (works for both env + supabase-js)
-  const getFunctionsBaseUrl = () => {
-    const base =
-      (supabase?.supabaseUrl || import.meta.env.VITE_SUPABASE_URL || '').replace(/\/$/, '')
-    if (!base) throw new Error('Missing Supabase URL (VITE_SUPABASE_URL).')
-    return `${base}/functions/v1`
-  }
-
-  const parseFilenameFromContentDisposition = (cd) => {
-    if (!cd) return null
-    // e.g. attachment; filename="gdpr-export-123.gz"
-    const m = /filename\*?=(?:UTF-8'')?["']?([^"';]+)["']?/i.exec(cd)
-    if (!m?.[1]) return null
-    try {
-      return decodeURIComponent(m[1])
-    } catch {
-      return m[1]
-    }
-  }
-
-  const downloadBlob = (blob, filename) => {
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = filename || 'gdpr-export'
-    document.body.appendChild(a)
-    a.click()
-    a.remove()
-    URL.revokeObjectURL(url)
-  }
-
-  // NEW: call Edge Function and handle binary attachment OR JSON
-  const handleGdprExport = async () => {
-    setGdprExportError(null)
-    setGdprExportResult(null)
-    setGdprExportDownloadInfo(null)
-    setGdprExportLoading(true)
-
-    try {
-      const token = await getFreshAccessToken()
-
-      if (import.meta.env.DEV) {
-        console.debug('[GDPR export] token meta', {
-          len: token?.length || 0,
-          jwtLike: isJwtLike(token),
-          exp: tryGetJwtExpIso(token),
-          sessionUserId: session?.user?.id,
-        })
-      }
-
-      const url = `${getFunctionsBaseUrl()}/gdpr-export`
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-          // allow either mode if your function ever returns JSON; otherwise it’ll just be an attachment
-          Accept: 'application/json, application/octet-stream, application/gzip, */*',
-        },
-        body: JSON.stringify({}),
-      })
-
-      const contentType = res.headers.get('content-type') || ''
-      const contentDisposition = res.headers.get('content-disposition') || ''
-
-      if (import.meta.env.DEV) {
-        console.debug('[GDPR export] response meta', {
-          status: res.status,
-          contentType,
-          contentDisposition,
-        })
-      }
-
-      if (!res.ok) {
-        // Try to surface useful error text from function
-        const text = await res.text().catch(() => '')
-        throw new Error(text || `Export failed (HTTP ${res.status}).`)
-      }
-
-      // If the function returns JSON, keep your existing UI (raw JSON + Download JSON)
-      if (contentType.includes('application/json')) {
-        const data = await res.json()
-        setGdprExportResult(data)
-        return
-      }
-
-      // Otherwise treat as file download (gzip/zip/etc)
-      const blob = await res.blob()
-      const filename =
-        parseFilenameFromContentDisposition(contentDisposition) ||
-        // fallback guesses
-        (contentType.includes('application/zip') ? 'gdpr-export.zip' :
-          contentType.includes('application/gzip') ? 'gdpr-export.gz' :
-          'gdpr-export.bin')
-
-      downloadBlob(blob, filename)
-      setGdprExportDownloadInfo(`Downloaded: ${filename}`)
-    } catch (err) {
-      setGdprExportError(err?.message || 'Export failed.')
-    } finally {
-      setGdprExportLoading(false)
-    }
-  }
-
-  // NEW: download JSON result in-browser (only when gdprExportResult is JSON)
-  const downloadGdprJson = () => {
-    if (!gdprExportResult) return
-    const json = JSON.stringify(gdprExportResult, null, 2)
-    const blob = new Blob([json], { type: 'application/json;charset=utf-8' })
-    const url = URL.createObjectURL(blob)
-
-    const a = document.createElement('a')
-    a.href = url
-    a.download = 'gdpr-export.json'
-    document.body.appendChild(a)
-    a.click()
-    a.remove()
-
-    URL.revokeObjectURL(url)
-  }
-
   return (
     <div className="min-h-screen bg-black text-white">
       <NavBar session={session} onSignOut={handleSignOut} />
@@ -984,89 +826,25 @@ export default function Profile({ session, player }) {
                   isModal
                   onClose={() => {
                     setShowSettings(false)
-                    // NEW: reset export UI on close
-                    setGdprExportLoading(false)
-                    setGdprExportError(null)
-                    setGdprExportResult(null)
-                    setGdprExportDownloadInfo(null) // NEW
                   }}
                 />
 
-                {/* NEW: GDPR export panel */}
-                <div className="bg-gray-900 border border-gray-800 rounded-lg p-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="min-w-0">
-                      <h4 className="text-lg font-semibold">Export my data</h4>
-                      <p className="text-sm text-gray-400">
-                        Generates a JSON export (with signed URLs where applicable).
-                      </p>
-                    </div>
-
-                    <div className="shrink-0 flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={handleGdprExport}
-                        disabled={gdprExportLoading}
-                        className="px-3 py-1.5 rounded bg-cyan-600 hover:bg-cyan-500 disabled:opacity-60 text-sm font-semibold"
-                      >
-                        {gdprExportLoading ? 'Exporting…' : 'Download export'}
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={downloadGdprJson}
-                        disabled={!gdprExportResult}
-                        className="px-3 py-1.5 rounded bg-gray-800 hover:bg-gray-700 disabled:opacity-60 text-sm"
-                        title="Enabled only if the function returns JSON"
-                      >
-                        Download JSON
-                      </button>
-                    </div>
-                  </div>
-
-                  {gdprExportError && (
-                    <div className="mt-3 text-sm text-red-400">{gdprExportError}</div>
-                  )}
-
-                  {gdprExportDownloadInfo && (
-                    <div className="mt-3 text-sm text-green-300">{gdprExportDownloadInfo}</div>
-                  )}
-
-                  {!!gdprExportResult && (
-                    <div className="mt-3 space-y-3">
-                      {/* If your function returns URLs in a known place, render links. Otherwise just show JSON. */}
-                      {Array.isArray(gdprExportResult?.export?.files) && gdprExportResult.export.files.length > 0 && (
-                        <div>
-                          <div className="text-sm font-semibold mb-2">Files</div>
-                          <ul className="space-y-1 text-sm">
-                            {gdprExportResult.export.files.map((f, i) => (
-                              <li key={f?.url || i} className="truncate">
-                                <a
-                                  href={f.url}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="text-teal-300 hover:underline"
-                                >
-                                  {f.name || f.url}
-                                </a>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-
-                      <details className="bg-gray-950/40 border border-gray-800 rounded p-3">
-                        <summary className="cursor-pointer text-sm text-gray-300">View raw JSON</summary>
-                        <pre className="mt-2 text-xs text-gray-300 overflow-x-auto">
-                          {JSON.stringify(gdprExportResult, null, 2)}
-                        </pre>
-                      </details>
-                    </div>
-                  )}
-                </div>
+                {/* REPLACE: inline GDPR panel with component */}
+                <GdprExportPanel session={session} />
               </div>
             </div>
           )}
+
+          {/* REPLACE: inline follow modal markup with component */}
+          <FollowModal
+            open={followModal.open}
+            type={followModal.type}
+            loading={followModalLoading}
+            error={followModalError}
+            users={followModalUsers}
+            onClose={closeFollowModal}
+            onSelectUser={handleProfileSelect}
+          />
         </>
       ) : (
         <div className="max-w-4xl mx-auto mt-16 p-6 bg-black bg-opacity-80 rounded-lg text-white pb-32 md:pb-6">
@@ -1396,78 +1174,14 @@ export default function Profile({ session, player }) {
         </div>
       )}
 
-      {/* FOLLOW MODAL (was missing UI, so buttons looked broken) */}
+      {/* DELETE this entire old inline follow modal block (duplicate + error-prone) */}
+      {/*
       {followModal.open && (
-        <div
-          className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4"
-          onMouseDown={(e) => {
-            // backdrop click closes
-            if (e.target === e.currentTarget) closeFollowModal()
-          }}
-        >
-          <div className="w-full max-w-md rounded-lg bg-gray-900 border border-gray-800 shadow-xl">
-            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-800">
-              <h3 className="text-lg font-semibold">
-                {followModal.type === 'followers' ? 'Followers' : 'Following'}
-              </h3>
-              <button
-                type="button"
-                onClick={closeFollowModal}
-                className="text-gray-300 hover:text-white"
-                aria-label="Close"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="p-4">
-              {followModalLoading ? (
-                <div className="text-sm text-gray-400">Loading…</div>
-              ) : followModalError ? (
-                <div className="text-sm text-red-400">{followModalError}</div>
-              ) : followModalUsers.length === 0 ? (
-                <div className="text-sm text-gray-400">No users found.</div>
-              ) : (
-                <ul className="max-h-96 overflow-y-auto space-y-2">
-                  {followModalUsers.map((u) => (
-                    <li key={u.id}>
-                      <button
-                        type="button"
-                        onClick={() => handleProfileSelect(u.id)}
-                        className="w-full flex items-center gap-3 rounded bg-gray-800 hover:bg-gray-700 px-3 py-2 text-left"
-                      >
-                        <img
-                          src={u.avatar_url || '/default-avatar.png'}
-                          alt={u.username || 'User'}
-                          className="w-10 h-10 rounded-full object-cover shrink-0"
-                          width="40"
-                          height="40"
-                          loading="lazy"
-                          decoding="async"
-                          onError={(e) => { e.target.src = '/default-avatar.png' }}
-                        />
-                        <div className="min-w-0">
-                          <div className="font-semibold truncate">{u.username || 'Anonymous'}</div>
-                        </div>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-
-            <div className="px-4 py-3 border-t border-gray-800 flex justify-end">
-              <button
-                type="button"
-                onClick={closeFollowModal}
-                className="px-3 py-1.5 rounded bg-gray-800 hover:bg-gray-700 text-sm"
-              >
-                Close
-              </button>
-            </div>
-          </div>
+        <div className="fixed inset-0 ...">
+          ...existing code...
         </div>
       )}
+      */}
     </div>
   )
 }
