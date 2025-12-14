@@ -400,6 +400,14 @@ const GlobalAudioPlayer = ({ audioRef, playerState, pause, resume, stop, session
   const { track, isPlaying, loading, error } = playerState
   const { increment: incrementPlayCount } = useIncrementPlayCount()
   const timerRef = useRef(null)
+  const canvasRef = useRef(null)
+  const audioCtxRef = useRef(null)
+  const analyserRef = useRef(null)
+  const sourceRef = useRef(null)
+  const dataArrayRef = useRef(null)
+  const animationRef = useRef(null)
+  const [progress, setProgress] = useState(0) // 0..1
+  const [duration, setDuration] = useState(0)
 
   const THRESHOLD_MS = 5000 // 5 seconds continuous playback
   const COOLDOWN_MS = 30 * 60 * 1000 // 30 minutes
@@ -495,6 +503,39 @@ const GlobalAudioPlayer = ({ audioRef, playerState, pause, resume, stop, session
     }
   }, [track?.id, incrementPlayCount, session?.user?.id])
 
+  useEffect(() => {
+    const audio = audioRef.current
+    if (!audio || !track?.id) return
+    const onLoaded = () => {
+      setDuration(audio.duration || 0)
+    }
+    const onTime = () => {
+      const d = audio.duration || 0
+      setDuration(d)
+      setProgress(d ? audio.currentTime / d : 0)
+    }
+    const onEnded = () => {
+      setProgress(0)
+    }
+    audio.addEventListener('loadedmetadata', onLoaded)
+    audio.addEventListener('timeupdate', onTime)
+    audio.addEventListener('ended', onEnded)
+    return () => {
+      audio.removeEventListener('loadedmetadata', onLoaded)
+      audio.removeEventListener('timeupdate', onTime)
+      audio.removeEventListener('ended', onEnded)
+    }
+  }, [track?.id])
+
+  const handleSeek = (e) => {
+    const audio = audioRef.current
+    if (!audio || !duration) return
+    const rect = e.currentTarget.getBoundingClientRect()
+    const ratio = Math.min(Math.max((e.clientX - rect.left) / rect.width, 0), 1)
+    audio.currentTime = ratio * duration
+    setProgress(ratio)
+  }
+
   if (!track) return null
 
   const coverSrc = track.image_path ? getPublicStorageUrl('track-images', track.image_path) : null
@@ -507,7 +548,7 @@ const GlobalAudioPlayer = ({ audioRef, playerState, pause, resume, stop, session
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-40 bg-gray-900/95 border-t border-gray-800 text-white">
-      <div className="mx-auto flex max-w-5xl items-center gap-4 px-4 py-3">
+      <div className="mx-auto relative flex max-w-5xl items-center gap-4 px-4 py-3">
         <img
           src={imageSrc}
           alt={track.title || 'Now playing'}
@@ -529,7 +570,31 @@ const GlobalAudioPlayer = ({ audioRef, playerState, pause, resume, stop, session
           {loading && <div className="text-[11px] text-teal-300">Loading audio…</div>}
           {!loading && error && <div className="text-[11px] text-red-400">{error}</div>}
         </div>
-        <div className="flex items-center gap-3">
+
+        {/* Centered progress line, absolutely positioned */}
+        <div className="pointer-events-none hidden sm:block absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-2xl px-10">
+          <div className="flex flex-col items-center gap-1">
+            <div
+              className="relative w-full h-2 cursor-pointer"
+              onClick={handleSeek}
+              aria-label="Seek"
+              style={{ pointerEvents: 'auto' }}
+            >
+              <div className="absolute inset-y-0 left-0 rounded-full bg-gray-700" />
+              <div
+                className="absolute inset-y-0 left-0 rounded-full bg-teal-400 transition-[width] duration-150"
+                style={{ width: `${(progress || 0) * 100}%` }}
+              />
+            </div>
+            <div className="text-[11px] text-gray-300 tabular-nums">
+              {Number.isFinite(duration) && duration > 0
+                ? `${Math.floor((progress * duration) / 60).toString().padStart(2, '0')}:${Math.floor((progress * duration) % 60).toString().padStart(2, '0')} / ${Math.floor(duration / 60).toString().padStart(2, '0')}:${Math.floor(duration % 60).toString().padStart(2, '0')}`
+                : '00:00 / 00:00'}
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3 ml-auto">
           <button
             type="button"
             onClick={isPlaying ? pause : resume}
