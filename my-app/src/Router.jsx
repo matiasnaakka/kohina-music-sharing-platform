@@ -2,7 +2,7 @@ import './index.css'
 import { useState, useEffect, useMemo } from 'react'
 import { Auth } from '@supabase/auth-ui-react'
 import { ThemeSupa } from '@supabase/auth-ui-shared'
-import { HashRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { supabase } from './supabaseclient'
 import Home from './pages/Home'
 import ProtectedRoute from './components/protectedRoutes'
@@ -22,9 +22,9 @@ const Routing = ({ player }) => {
   const [session, setSession] = useState(null)
   const [loading, setLoading] = useState(true)
 
-  // Cloudflare Pages friendly: keep all app routing inside the hash.
-  const redirectToHome = useMemo(() => `${window.location.origin}/#/home`, [])
-  const redirectToReset = useMemo(() => `${window.location.origin}/#/reset-password`, [])
+  // Cloudflare Pages friendly
+  const redirectToHome = useMemo(() => `${window.location.origin}/home`, [])
+  const redirectToReset = useMemo(() => `${window.location.origin}/reset-password`, [])
 
   useEffect(() => {
     // Set loading state to true while we check for an existing session
@@ -53,7 +53,7 @@ const Routing = ({ player }) => {
   }, [loading, session, player])
 
   return (
-    <HashRouter>
+    <BrowserRouter>
       <Routes>
         {/* Root route shows login when not authenticated, or redirects to /home */}
         <Route
@@ -84,7 +84,7 @@ const Routing = ({ player }) => {
             <PasswordResetForm
               // Avoid full reload; stay within HashRouter
               onResetComplete={() => {
-                window.location.hash = '#/home'
+                window.location.replace('/home')
               }}
             />
           }
@@ -124,7 +124,7 @@ const Routing = ({ player }) => {
           }
         />
       </Routes>
-    </HashRouter>
+    </BrowserRouter>
   )
 }
 
