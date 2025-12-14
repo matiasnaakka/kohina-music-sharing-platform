@@ -65,6 +65,7 @@ export default function Profile({ session, player }) {
   const [gdprExportLoading, setGdprExportLoading] = useState(false)
   const [gdprExportError, setGdprExportError] = useState(null)
   const [gdprExportResult, setGdprExportResult] = useState(null)
+  const [gdprExportDownloadInfo, setGdprExportDownloadInfo] = useState(null) // NEW
 
   const handleSignOut = async () => {
     await supabase.auth.signOut()
@@ -488,6 +489,19 @@ export default function Profile({ session, player }) {
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [followModal.open]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // NEW: minimal JWT helpers (safe logging only)
+  const isJwtLike = (token) => typeof token === 'string' && token.split('.').length === 3
+  const tryGetJwtExpIso = (token) => {
+    try {
+      if (!isJwtLike(token)) return null
+      const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')
+      const json = JSON.parse(atob(base64))
+      return json?.exp ? new Date(json.exp * 1000).toISOString() : null
+    } catch {
+      return null
+    }
+  }
+
   // NEW: keep auth token fresh-ish (edge function requires unexpired access token)
   const getFreshAccessToken = async () => {
     const { data: s1, error: e1 } = await supabase.auth.getSession()
@@ -508,55 +522,108 @@ export default function Profile({ session, player }) {
     return current.access_token
   }
 
-  // NEW: call Edge Function and store export JSON
+  // NEW: functions base URL helper (works for both env + supabase-js)
+  const getFunctionsBaseUrl = () => {
+    const base =
+      (supabase?.supabaseUrl || import.meta.env.VITE_SUPABASE_URL || '').replace(/\/$/, '')
+    if (!base) throw new Error('Missing Supabase URL (VITE_SUPABASE_URL).')
+    return `${base}/functions/v1`
+  }
+
+  const parseFilenameFromContentDisposition = (cd) => {
+    if (!cd) return null
+    // e.g. attachment; filename="gdpr-export-123.gz"
+    const m = /filename\*?=(?:UTF-8'')?["']?([^"';]+)["']?/i.exec(cd)
+    if (!m?.[1]) return null
+    try {
+      return decodeURIComponent(m[1])
+    } catch {
+      return m[1]
+    }
+  }
+
+  const downloadBlob = (blob, filename) => {
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename || 'gdpr-export'
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    URL.revokeObjectURL(url)
+  }
+
+  // NEW: call Edge Function and handle binary attachment OR JSON
   const handleGdprExport = async () => {
     setGdprExportError(null)
     setGdprExportResult(null)
+    setGdprExportDownloadInfo(null)
     setGdprExportLoading(true)
+
     try {
       const token = await getFreshAccessToken()
 
-      // Prefer invoke() so the project URL is handled by the client.
-      const { data, error } = await supabase.functions.invoke('gdpr-export', {
-        method: 'GET',
+      if (import.meta.env.DEV) {
+        console.debug('[GDPR export] token meta', {
+          len: token?.length || 0,
+          jwtLike: isJwtLike(token),
+          exp: tryGetJwtExpIso(token),
+          sessionUserId: session?.user?.id,
+        })
+      }
+
+      const url = `${getFunctionsBaseUrl()}/gdpr-export`
+      const res = await fetch(url, {
+        method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          // allow either mode if your function ever returns JSON; otherwise it’ll just be an attachment
+          Accept: 'application/json, application/octet-stream, application/gzip, */*',
         },
+        body: JSON.stringify({}),
       })
 
-      if (error) {
-        // supabase-js wraps non-2xx and network errors here
-        throw new Error(error.message || 'Export request failed.')
+      const contentType = res.headers.get('content-type') || ''
+      const contentDisposition = res.headers.get('content-disposition') || ''
+
+      if (import.meta.env.DEV) {
+        console.debug('[GDPR export] response meta', {
+          status: res.status,
+          contentType,
+          contentDisposition,
+        })
       }
 
-      // expected: { ok: true, export: ... }
-      if (!data?.ok) {
-        throw new Error(data?.error || 'Export failed.')
+      if (!res.ok) {
+        // Try to surface useful error text from function
+        const text = await res.text().catch(() => '')
+        throw new Error(text || `Export failed (HTTP ${res.status}).`)
       }
 
-      setGdprExportResult(data)
+      // If the function returns JSON, keep your existing UI (raw JSON + Download JSON)
+      if (contentType.includes('application/json')) {
+        const data = await res.json()
+        setGdprExportResult(data)
+        return
+      }
+
+      // Otherwise treat as file download (gzip/zip/etc)
+      const blob = await res.blob()
+      const filename =
+        parseFilenameFromContentDisposition(contentDisposition) ||
+        // fallback guesses
+        (contentType.includes('application/zip') ? 'gdpr-export.zip' :
+          contentType.includes('application/gzip') ? 'gdpr-export.gz' :
+          'gdpr-export.bin')
+
+      downloadBlob(blob, filename)
+      setGdprExportDownloadInfo(`Downloaded: ${filename}`)
     } catch (err) {
       setGdprExportError(err?.message || 'Export failed.')
     } finally {
       setGdprExportLoading(false)
     }
-  }
-
-  // NEW: download JSON result in-browser
-  const downloadGdprJson = () => {
-    if (!gdprExportResult) return
-    const json = JSON.stringify(gdprExportResult, null, 2)
-    const blob = new Blob([json], { type: 'application/json;charset=utf-8' })
-    const url = URL.createObjectURL(blob)
-
-    const a = document.createElement('a')
-    a.href = url
-    a.download = 'gdpr-export.json'
-    document.body.appendChild(a)
-    a.click()
-    a.remove()
-
-    URL.revokeObjectURL(url)
   }
 
   return (
@@ -904,6 +971,7 @@ export default function Profile({ session, player }) {
                     setGdprExportLoading(false)
                     setGdprExportError(null)
                     setGdprExportResult(null)
+                    setGdprExportDownloadInfo(null) // NEW
                   }}
                 />
 
@@ -924,7 +992,7 @@ export default function Profile({ session, player }) {
                         disabled={gdprExportLoading}
                         className="px-3 py-1.5 rounded bg-cyan-600 hover:bg-cyan-500 disabled:opacity-60 text-sm font-semibold"
                       >
-                        {gdprExportLoading ? 'Exporting…' : 'Request export'}
+                        {gdprExportLoading ? 'Exporting…' : 'Download export'}
                       </button>
 
                       <button
@@ -932,6 +1000,7 @@ export default function Profile({ session, player }) {
                         onClick={downloadGdprJson}
                         disabled={!gdprExportResult}
                         className="px-3 py-1.5 rounded bg-gray-800 hover:bg-gray-700 disabled:opacity-60 text-sm"
+                        title="Enabled only if the function returns JSON"
                       >
                         Download JSON
                       </button>
@@ -940,6 +1009,10 @@ export default function Profile({ session, player }) {
 
                   {gdprExportError && (
                     <div className="mt-3 text-sm text-red-400">{gdprExportError}</div>
+                  )}
+
+                  {gdprExportDownloadInfo && (
+                    <div className="mt-3 text-sm text-green-300">{gdprExportDownloadInfo}</div>
                   )}
 
                   {!!gdprExportResult && (
@@ -1338,7 +1411,7 @@ export default function Profile({ session, player }) {
               ) : followModalUsers.length === 0 ? (
                 <div className="text-sm text-gray-400">No users found.</div>
               ) : (
-                <ul className="max-h-96 overflow-y-auto space-y-2">
+                <ul className="max-h-96 overflow-y-auto space-y-2"></ul>
                   {followModalUsers.map((u) => (
                     <li key={u.id}>
                       <button
