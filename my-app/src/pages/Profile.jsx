@@ -61,6 +61,11 @@ export default function Profile({ session, player }) {
   // NEW: Comments expansion state
   const [expandedComments, setExpandedComments] = useState(null)
 
+  // NEW: GDPR export state
+  const [gdprExportLoading, setGdprExportLoading] = useState(false)
+  const [gdprExportError, setGdprExportError] = useState(null)
+  const [gdprExportResult, setGdprExportResult] = useState(null)
+
   const handleSignOut = async () => {
     await supabase.auth.signOut()
   }
@@ -483,6 +488,77 @@ export default function Profile({ session, player }) {
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [followModal.open]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // NEW: keep auth token fresh-ish (edge function requires unexpired access token)
+  const getFreshAccessToken = async () => {
+    const { data: s1, error: e1 } = await supabase.auth.getSession()
+    if (e1) throw e1
+    let current = s1?.session
+
+    if (!current) throw new Error('Not authenticated.')
+
+    const expiresAtMs = (current.expires_at || 0) * 1000
+    const shouldRefresh = expiresAtMs && expiresAtMs < Date.now() + 30_000
+    if (shouldRefresh) {
+      const { data: s2, error: e2 } = await supabase.auth.refreshSession()
+      if (e2) throw e2
+      current = s2?.session || current
+    }
+
+    if (!current?.access_token) throw new Error('Missing access token.')
+    return current.access_token
+  }
+
+  // NEW: call Edge Function and store export JSON
+  const handleGdprExport = async () => {
+    setGdprExportError(null)
+    setGdprExportResult(null)
+    setGdprExportLoading(true)
+    try {
+      const token = await getFreshAccessToken()
+
+      // Prefer invoke() so the project URL is handled by the client.
+      const { data, error } = await supabase.functions.invoke('gdpr-export', {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      if (error) {
+        // supabase-js wraps non-2xx and network errors here
+        throw new Error(error.message || 'Export request failed.')
+      }
+
+      // expected: { ok: true, export: ... }
+      if (!data?.ok) {
+        throw new Error(data?.error || 'Export failed.')
+      }
+
+      setGdprExportResult(data)
+    } catch (err) {
+      setGdprExportError(err?.message || 'Export failed.')
+    } finally {
+      setGdprExportLoading(false)
+    }
+  }
+
+  // NEW: download JSON result in-browser
+  const downloadGdprJson = () => {
+    if (!gdprExportResult) return
+    const json = JSON.stringify(gdprExportResult, null, 2)
+    const blob = new Blob([json], { type: 'application/json;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'gdpr-export.json'
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+
+    URL.revokeObjectURL(url)
+  }
+
   return (
     <div className="min-h-screen bg-black text-white">
       <NavBar session={session} onSignOut={handleSignOut} />
@@ -819,7 +895,85 @@ export default function Profile({ session, player }) {
             <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
               <div className="w-full max-w-lg mx-4 space-y-4">
                 {/* UserProfile component for editable settings */}
-                <UserProfile session={session} isModal onClose={() => setShowSettings(false)} />
+                <UserProfile
+                  session={session}
+                  isModal
+                  onClose={() => {
+                    setShowSettings(false)
+                    // NEW: reset export UI on close
+                    setGdprExportLoading(false)
+                    setGdprExportError(null)
+                    setGdprExportResult(null)
+                  }}
+                />
+
+                {/* NEW: GDPR export panel */}
+                <div className="bg-gray-900 border border-gray-800 rounded-lg p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <h4 className="text-lg font-semibold">Export my data</h4>
+                      <p className="text-sm text-gray-400">
+                        Generates a JSON export (with signed URLs where applicable).
+                      </p>
+                    </div>
+
+                    <div className="shrink-0 flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={handleGdprExport}
+                        disabled={gdprExportLoading}
+                        className="px-3 py-1.5 rounded bg-cyan-600 hover:bg-cyan-500 disabled:opacity-60 text-sm font-semibold"
+                      >
+                        {gdprExportLoading ? 'Exporting…' : 'Request export'}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={downloadGdprJson}
+                        disabled={!gdprExportResult}
+                        className="px-3 py-1.5 rounded bg-gray-800 hover:bg-gray-700 disabled:opacity-60 text-sm"
+                      >
+                        Download JSON
+                      </button>
+                    </div>
+                  </div>
+
+                  {gdprExportError && (
+                    <div className="mt-3 text-sm text-red-400">{gdprExportError}</div>
+                  )}
+
+                  {!!gdprExportResult && (
+                    <div className="mt-3 space-y-3">
+                      {/* If your function returns URLs in a known place, render links. Otherwise just show JSON. */}
+                      {Array.isArray(gdprExportResult?.export?.files) && gdprExportResult.export.files.length > 0 && (
+                        <div>
+                          <div className="text-sm font-semibold mb-2">Files</div>
+                          <ul className="space-y-1 text-sm">
+                            {gdprExportResult.export.files.map((f, i) => (
+                              <li key={f?.url || i} className="truncate">
+                                <a
+                                  href={f.url}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="text-teal-300 hover:underline"
+                                >
+                                  {f.name || f.url}
+                                </a>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      <details className="bg-gray-950/40 border border-gray-800 rounded p-3">
+                        <summary className="cursor-pointer text-sm text-gray-300">View raw JSON</summary>
+                        <pre className="mt-2 text-xs text-gray-300 overflow-x-auto">
+                          {JSON.stringify(gdprExportResult, null, 2)}
+                        </pre>
+                      </details>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           )}
