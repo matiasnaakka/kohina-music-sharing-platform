@@ -1,1 +1,43 @@
 @import "tailwindcss";
+
+/* ...existing code... */
+
+.supabase-auth-ui input,
+.auth-ui input,
+.supa-auth input,
+.supa-auth-ui input,
+div[data-testid="auth"] input,
+div[data-testid="auth"] textarea {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border: 1px solid #e5e7eb !important;
+  border-radius: 8px !important;
+  padding: 0.5rem 0.75rem !important;
+}
+
+.supabase-auth-ui input::placeholder,
+.auth-ui input::placeholder,
+div[data-testid="auth"] input::placeholder {
+  color: #6b7280 !important;
+  opacity: 1 !important;
+}
+
+.supabase-auth-ui input:-webkit-autofill,
+.auth-ui input:-webkit-autofill,
+div[data-testid="auth"] input:-webkit-autofill {
+  -webkit-text-fill-color: #0f172a !important;
+  box-shadow: 0 0 0 1000px #ffffff inset !important;
+}
+
+.supabase-auth-ui label,
+.auth-ui label,
+div[data-testid="auth"] label {
+  color: #0f172a !important;
+}
+
+:where(form input#email, form input#password) {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border: 1px solid #e5e7eb !important;
+  border-radius: 8px !important;
+}

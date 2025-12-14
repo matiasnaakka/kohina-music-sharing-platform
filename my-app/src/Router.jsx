@@ -12,6 +12,22 @@ import Upload from './pages/Upload'
 import PasswordResetForm from './components/PasswordResetForm'
 import Playlist from './pages/Playlist'
 
+const customAppearance = {
+  theme: {
+    ...ThemeSupa,
+    colors: {
+      bg: '#ffffff',
+      brand: '#06b6d4',
+      brandAccent: '#0ea5a4',
+      defaultButtonText: '#ffffff',
+      inputBackground: '#ffffff',
+      inputText: '#0f172a',
+      inputPlaceholder: '#6b7280',
+      inputBorder: '#e5e7eb',
+    },
+  },
+}
+
 /*
   Routing.jsx
   - Checks Supabase auth state on mount.
@@ -67,7 +83,7 @@ const Routing = ({ player }) => {
               <LoginLayout>
                 <Auth
                   supabaseClient={supabase}
-                  appearance={{ theme: ThemeSupa }}
+                  appearance={customAppearance}
                   providers={[]}
                   // Ensures external auth flows return into the SPA route on Cloudflare Pages
                   redirectTo={redirectToHome}
