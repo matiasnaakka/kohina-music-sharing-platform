@@ -340,6 +340,46 @@ const App = () => {
     }
   }, [])
 
+  // Responsive sizing for the profile settings modal
+  useEffect(() => {
+    const style = document.createElement('style')
+    style.id = 'profile-settings-modal-responsive'
+    style.textContent = `
+      .profile-settings-modal {
+        width: clamp(320px, 90vw, 560px);
+        max-height: 86vh;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        overflow: hidden;
+        box-sizing: border-box;
+      }
+      .profile-settings-modal .modal-body {
+        overflow-y: auto;
+        max-height: calc(86vh - 24px);
+        padding: 8px 4px 12px;
+        box-sizing: border-box;
+        scrollbar-gutter: stable;
+      }
+      .profile-settings-modal img {
+        max-width: 160px;
+        height: auto;
+      }
+      @media (max-width: 480px) {
+        .profile-settings-modal {
+          width: 94vw;
+          max-height: 82vh;
+          gap: 8px;
+        }
+        .profile-settings-modal .modal-body {
+          padding: 6px 2px 10px;
+        }
+      }
+    `
+    document.head.appendChild(style)
+    return () => style.remove()
+  }, [])
+
   return (
     <>
       <Routing player={player} />

@@ -6,13 +6,20 @@ export default function ProfileSettingsModal({ open, session, onClose }) {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
-      <div className="w-full max-w-lg mx-4 space-y-4">
-        <UserProfile
-          session={session}
-          isModal
-          onClose={onClose}
-        />
-        <GdprExportPanel session={session} />
+      <div
+        className="profile-settings-modal w-full mx-4 space-y-4"
+        data-modal="profile-settings"
+        role="dialog"
+        aria-modal="true"
+      >
+        <div className="modal-body space-y-4">
+          <UserProfile
+            session={session}
+            isModal
+            onClose={onClose}
+          />
+          <GdprExportPanel session={session} />
+        </div>
       </div>
     </div>
   )
