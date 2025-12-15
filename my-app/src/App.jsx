@@ -463,6 +463,7 @@ const GlobalAudioPlayer = ({
   const animationRef = useRef(null)
   const [progress, setProgress] = useState(0) // 0..1
   const [duration, setDuration] = useState(0)
+  const [isFullscreen, setIsFullscreen] = useState(false)
 
   const THRESHOLD_MS = 5000 // 5 seconds continuous playback
   const COOLDOWN_MS = 30 * 60 * 1000 // 30 minutes
@@ -583,6 +584,7 @@ const GlobalAudioPlayer = ({
   }, [track?.id])
 
   const handleSeek = (e) => {
+    e.stopPropagation()
     const audio = audioRef.current
     if (!audio || !duration) return
     const rect = e.currentTarget.getBoundingClientRect()
@@ -598,6 +600,12 @@ const GlobalAudioPlayer = ({
     if (audio) audio.volume = next
   }
 
+  // Helper to stop propagation on control clicks
+  const withStop = (fn) => (e) => {
+    e.stopPropagation()
+    fn?.()
+  }
+
   if (!track) return null
 
   const coverSrc = track.image_path ? getPublicStorageUrl('track-images', track.image_path) : null
@@ -609,103 +617,194 @@ const GlobalAudioPlayer = ({
   const imageSrc = coverSrc || fallbackCover
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-40 bg-gray-900/95 border-t border-gray-800 text-white">
-      <div className="mx-auto relative flex max-w-5xl items-center gap-4 px-4 py-3">
-        <img
-          src={imageSrc}
-          alt={track.title || 'Now playing'}
-          className="h-12 w-12 rounded object-cover"
-          width="48"
-          height="48"
-          decoding="async"
-          loading="lazy"
-          onError={(e) => {
-            e.target.src = '/default-avatar.png'
-          }}
-        />
-        <div className="min-w-0 flex-1">
-          <div className="truncate text-sm font-semibold">{track.title || 'Untitled track'}</div>
-          <div className="truncate text-xs text-gray-400">
-            {track.artist || 'Unknown artist'}
-            {track.album ? ` • ${track.album}` : ''}
+    <>
+      {isFullscreen && (
+        <div
+          className="fixed inset-0 z-60 bg-black/90 flex flex-col items-center justify-center gap-4 px-6"
+          role="dialog"
+          aria-modal="true"
+        >
+          <img
+            src={imageSrc}
+            alt={track.title || 'Now playing'}
+            className="w-48 h-48 md:w-64 md:h-64 rounded object-cover shadow-lg"
+            onError={(e) => { e.target.src = '/default-avatar.png' }}
+          />
+          <div className="text-center space-y-1">
+            <div className="text-xl font-bold truncate max-w-xl">{track.title || 'Untitled track'}</div>
+            <div className="text-sm text-gray-400 truncate max-w-xl">{track.artist || 'Unknown artist'}</div>
           </div>
-          {loading && <div className="text-[11px] text-teal-300">Loading audio…</div>}
-          {!loading && error && <div className="text-[11px] text-red-400">{error}</div>}
-        </div>
-
-        {/* Centered progress line, absolutely positioned */}
-        <div className="pointer-events-none hidden sm:block absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-sm px-10">
-          <div className="flex flex-col items-center gap-1">
+          <div className="w-full max-w-2xl">
             <div
-              className="relative w-full h-2 cursor-pointer"
+              className="relative w-full h-3 cursor-pointer"
               onClick={handleSeek}
               aria-label="Seek"
-              style={{ pointerEvents: 'auto' }}
             >
-              <div className="absolute inset-y-0 left-0 rounded-full bg-gray-700" />
+              <div className="absolute inset-0 rounded-full bg-gray-800" />
               <div
                 className="absolute inset-y-0 left-0 rounded-full bg-amber-500 transition-[width] duration-150"
                 style={{ width: `${(progress || 0) * 100}%` }}
               />
             </div>
-            <div className="text-[11px] text-gray-300 tabular-nums">
+            <div className="mt-2 text-xs text-gray-300 text-center tabular-nums">
               {Number.isFinite(duration) && duration > 0
                 ? `${Math.floor((progress * duration) / 60).toString().padStart(2, '0')}:${Math.floor((progress * duration) % 60).toString().padStart(2, '0')} / ${Math.floor(duration / 60).toString().padStart(2, '0')}:${Math.floor(duration % 60).toString().padStart(2, '0')}`
                 : '00:00 / 00:00'}
             </div>
           </div>
-        </div>
-
-        <div className="flex items-center gap-3 ml-auto">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={withStop(onPrev)}
+              className="px-3 py-2 rounded bg-gray-800 text-white hover:bg-gray-700 disabled:opacity-60 flex items-center gap-2"
+              disabled={!canNavigate || loading}
+              aria-label="Previous track"
+            >
+              <img
+                src="/images/previous-svgrepo-com.svg"
+                alt="Previous track"
+                className="h-8 w-8"
+                loading="lazy"
+              />
+              <span>Previous</span>
+            </button>
+            <button
+              type="button"
+              onClick={withStop(isPlaying ? pause : resume)}
+              className="px-4 py-2 rounded bg-amber-500 text-black font-semibold hover:bg-amber-600 disabled:opacity-60"
+              disabled={loading}
+            >
+              {isPlaying ? 'Pause' : 'Play'}
+            </button>
+            <button
+              type="button"
+              onClick={withStop(onNext)}
+              className="px-3 py-2 rounded bg-gray-800 text-white hover:bg-gray-700 disabled:opacity-60 flex items-center gap-2"
+              disabled={!canNavigate || loading}
+              aria-label="Next track"
+            >
+              <img
+                src="/images/next-svgrepo-com.svg"
+                alt="Next track"
+                className="h-8 w-8"
+                loading="lazy"
+                width="80"
+                height="80"
+              />
+              <span>Next</span>
+            </button>
+          </div>
           <button
             type="button"
-            onClick={onPrev}
-            className="px-2 py-1 text-sm text-gray-200 hover:bg-gray-800"
-            disabled={!canNavigate || loading}
-            aria-label="Previous track"
-          >
-            <img
-              src="/images/previous-svgrepo-com.svg"
-              alt="Previous track"
-              className="h-10 w-10"
-              loading="lazy"
-            />
-          </button>
-          <button
-            type="button"
-            onClick={isPlaying ? pause : resume}
-            className="rounded-full bg-amber-500 px-3 py-1 text-sm font-semibold hover:bg-amber-600 disabled:opacity-60"
-            disabled={loading}
-          >
-            {isPlaying ? 'Pause' : 'Play'}
-          </button>
-          <button
-            type="button"
-            onClick={onNext}
-            className="px-2 py-1 text-sm text-gray-200 hover:bg-gray-800"
-            disabled={!canNavigate || loading}
-            aria-label="Next track"
-          >
-            <img
-              src="/images/next-svgrepo-com.svg"
-              alt="Next track"
-              className="h-10 w-10"
-              loading="lazy"
-              width="80"
-              height="80"
-            />
-          </button>
-          <button
-            type="button"
-            onClick={stop}
-            className="rounded-full border border-gray-600 px-3 py-1 text-sm text-gray-200 hover:bg-gray-800"
+            onClick={withStop(() => setIsFullscreen(false))}
+            className="mt-2 px-4 py-2 rounded border border-gray-600 text-gray-200 hover:bg-gray-800"
           >
             Close
           </button>
         </div>
+      )}
+
+      <div
+        className="fixed bottom-0 left-0 right-0 z-40 bg-gray-900/95 border-t border-gray-800 text-white"
+        onClick={() => setIsFullscreen(true)}
+      >
+        <div className="mx-auto relative flex max-w-5xl items-center gap-4 px-4 py-3">
+          <img
+            src={imageSrc}
+            alt={track.title || 'Now playing'}
+            className="h-12 w-12 rounded object-cover"
+            width="48"
+            height="48"
+            decoding="async"
+            loading="lazy"
+            onError={(e) => {
+              e.target.src = '/default-avatar.png'
+            }}
+          />
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-sm font-semibold">{track.title || 'Untitled track'}</div>
+            <div className="truncate text-xs text-gray-400">
+              {track.artist || 'Unknown artist'}
+              {track.album ? ` • ${track.album}` : ''}
+            </div>
+            {loading && <div className="text-[11px] text-teal-300">Loading audio…</div>}
+            {!loading && error && <div className="text-[11px] text-red-400">{error}</div>}
+          </div>
+
+          {/* Centered progress line, absolutely positioned */}
+          <div className="pointer-events-none hidden sm:block absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-sm px-10">
+            <div className="flex flex-col items-center gap-1">
+              <div
+                className="relative w-full h-2 cursor-pointer"
+                onClick={handleSeek}
+                aria-label="Seek"
+                style={{ pointerEvents: 'auto' }}
+              >
+                <div className="absolute inset-y-0 left-0 rounded-full bg-gray-700" />
+                <div
+                  className="absolute inset-y-0 left-0 rounded-full bg-amber-500 transition-[width] duration-150"
+                  style={{ width: `${(progress || 0) * 100}%` }}
+                />
+              </div>
+              <div className="text-[11px] text-gray-300 tabular-nums">
+                {Number.isFinite(duration) && duration > 0
+                  ? `${Math.floor((progress * duration) / 60).toString().padStart(2, '0')}:${Math.floor((progress * duration) % 60).toString().padStart(2, '0')} / ${Math.floor(duration / 60).toString().padStart(2, '0')}:${Math.floor(duration % 60).toString().padStart(2, '0')}`
+                  : '00:00 / 00:00'}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 ml-auto">
+            <button
+              type="button"
+              onClick={withStop(onPrev)}
+              className="px-2 py-1 text-sm text-gray-200 hover:bg-gray-800"
+              disabled={!canNavigate || loading}
+              aria-label="Previous track"
+            >
+              <img
+                src="/images/previous-svgrepo-com.svg"
+                alt="Previous track"
+                className="h-10 w-10"
+                loading="lazy"
+              />
+            </button>
+            <button
+              type="button"
+              onClick={withStop(isPlaying ? pause : resume)}
+              className="rounded-full bg-amber-500 px-3 py-1 text-sm font-semibold hover:bg-amber-600 disabled:opacity-60"
+              disabled={loading}
+            >
+              {isPlaying ? 'Pause' : 'Play'}
+            </button>
+            <button
+              type="button"
+              onClick={withStop(onNext)}
+              className="px-2 py-1 text-sm text-gray-200 hover:bg-gray-800"
+              disabled={!canNavigate || loading}
+              aria-label="Next track"
+            >
+              <img
+                src="/images/next-svgrepo-com.svg"
+                alt="Next track"
+                className="h-10 w-10"
+                loading="lazy"
+                width="80"
+                height="80"
+              />
+            </button>
+            <button
+              type="button"
+              onClick={withStop(stop)}
+              className="rounded-full border border-gray-600 px-3 py-1 text-sm text-gray-200 hover:bg-gray-800"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+        <audio ref={audioRef} className="hidden" preload="metadata" />
       </div>
-      <audio ref={audioRef} className="hidden" preload="metadata" />
-    </div>
+    </>
   )
 }
 
