@@ -2,6 +2,115 @@
 
 /* ...existing code... */
 
+:root {
+  --bg-primary: #0f0f0f;
+  --bg-card: #1a1a1a;
+  --bg-elevated: #1f1f1f;
+  --bg-subtle: #242424;
+  --text-primary: #e0e0e0;
+  --text-secondary: #c4c4c4;
+  --text-tertiary: #a6a6a6;
+  --border-subtle: #262626;
+  --border-strong: #2f2f2f;
+  --accent: #00c8aa;
+  --accent-strong: #00a890;
+  --muted-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+}
+
+@layer base {
+  html,
+  body {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    font-feature-settings: 'ss01' on, 'cv02' on;
+  }
+
+  body {
+    line-height: 1.6;
+    letter-spacing: 0.01em;
+  }
+
+  .bg-black {
+    background-color: #0f0f0f !important;
+  }
+
+  .bg-gray-900 {
+    background-color: #141414 !important;
+  }
+
+  .bg-gray-800 {
+    background-color: #1c1c1c !important;
+  }
+
+  .bg-gray-700 {
+    background-color: #242424 !important;
+  }
+
+  .bg-gray-600 {
+    background-color: #2d2d2d !important;
+  }
+
+  .text-white {
+    color: #e0e0e0 !important;
+  }
+
+  .text-gray-300 {
+    color: #c8c8c8 !important;
+  }
+
+  .text-gray-400 {
+    color: #b0b0b0 !important;
+  }
+
+  .text-gray-500 {
+    color: #9b9b9b !important;
+  }
+
+  .border-gray-800 {
+    border-color: #262626 !important;
+  }
+
+  .border-gray-700 {
+    border-color: #2f2f2f !important;
+  }
+
+  .border-gray-600 {
+    border-color: #3a3a3a !important;
+  }
+}
+
+@layer components {
+  .card-elevated {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    box-shadow: var(--muted-shadow);
+  }
+
+  .card-subtle {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-subtle);
+  }
+
+  .btn-accent {
+    background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+    color: #061412;
+  }
+
+  .btn-accent:hover {
+    filter: brightness(1.05);
+  }
+
+  .pill-subtle {
+    background: #202020;
+    color: var(--text-secondary);
+    border: 1px solid var(--border-subtle);
+  }
+
+  .text-muted {
+    color: var(--text-secondary);
+  }
+}
+
 .supabase-auth-ui input,
 .auth-ui input,
 .supa-auth input,

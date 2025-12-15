@@ -742,7 +742,11 @@ export default function Upload({ session, player }) {
                         ) : (
                           <span className="text-red-400">Audio unavailable</span>
                         )}
-                        <AddToPlaylist session={session} track={track} />
+                        <AddToPlaylist
+                          session={session}
+                          track={track}
+                          buttonClassName="bg-gray-700 text-white px-2 py-1 rounded text-sm hover:bg-gray-600"
+                        />
                         <button
                           onClick={() => handleDeleteTrack(track.id)}
                           className="bg-red-500 text-white p-1 rounded"

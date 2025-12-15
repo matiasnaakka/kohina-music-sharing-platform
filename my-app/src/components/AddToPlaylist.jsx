@@ -5,7 +5,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../supabaseclient'
 
-const AddToPlaylist = ({ session, track }) => {
+const AddToPlaylist = ({ session, track, buttonClassName = 'bg-gray-700 text-white px-2 py-1 rounded text-sm hover:bg-gray-600' }) => {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [playlists, setPlaylists] = useState([])
@@ -124,7 +124,7 @@ const AddToPlaylist = ({ session, track }) => {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="bg-indigo-500 text-white px-2 py-1 rounded text-sm hover:bg-indigo-400"
+        className={buttonClassName}
       >
         Add to playlist
       </button>

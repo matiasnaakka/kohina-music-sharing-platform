@@ -97,7 +97,11 @@ export default function SidebarLikedTracks({
                   {trackIsLiked ? '❤️' : '🤍'}
                 </button>
                 <Suspense fallback={null}>
-                  <AddToPlaylist session={session} track={track} />
+                  <AddToPlaylist
+                    session={session}
+                    track={track}
+                    buttonClassName="bg-gray-700 text-white px-1.5 py-0.5 rounded text-xs hover:bg-gray-600"
+                  />
                 </Suspense>
               </div>
             </div>

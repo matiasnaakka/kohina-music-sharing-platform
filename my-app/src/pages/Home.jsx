@@ -481,7 +481,11 @@ export default function Home({ session, player }) {
                           {trackIsLiked ? '❤️ Liked' : '🤍 Like'}
                         </button>
                         <Suspense fallback={null}>
-                          <AddToPlaylist session={session} track={track} />
+                          <AddToPlaylist
+                            session={session}
+                            track={track}
+                            buttonClassName="bg-gray-700 text-white px-2 py-1 rounded text-sm hover:bg-gray-600"
+                          />
                         </Suspense>
                       </div>
                     </div>
