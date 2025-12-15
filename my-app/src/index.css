@@ -42,3 +42,7 @@ div[data-testid="auth"] label {
   border-radius: 8px !important;
   font-size: 16px !important; /* prevent iOS zoom */
 }
+
+.relative.w-full.h-2.cursor-pointer {
+  background-color: black;
+}

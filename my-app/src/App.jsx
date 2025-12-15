@@ -634,7 +634,7 @@ const GlobalAudioPlayer = ({
         </div>
 
         {/* Centered progress line, absolutely positioned */}
-        <div className="pointer-events-none hidden sm:block absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-2xl px-10">
+        <div className="pointer-events-none hidden sm:block absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-sm px-10">
           <div className="flex flex-col items-center gap-1">
             <div
               className="relative w-full h-2 cursor-pointer"
@@ -644,7 +644,7 @@ const GlobalAudioPlayer = ({
             >
               <div className="absolute inset-y-0 left-0 rounded-full bg-gray-700" />
               <div
-                className="absolute inset-y-0 left-0 rounded-full bg-teal-400 transition-[width] duration-150"
+                className="absolute inset-y-0 left-0 rounded-full bg-amber-500 transition-[width] duration-150"
                 style={{ width: `${(progress || 0) * 100}%` }}
               />
             </div>
@@ -657,20 +657,6 @@ const GlobalAudioPlayer = ({
         </div>
 
         <div className="flex items-center gap-3 ml-auto">
-          <label className="hidden sm:flex items-center gap-2 text-xs text-gray-300">
-            🔊
-            <input
-              type="range"
-              min="0"
-              max="1"
-              step="0.05"
-              value={volume}
-              onChange={handleVolume}
-              className="w-24 accent-teal-400"
-              aria-label="Volume"
-            />
-            <span className="w-8 tabular-nums text-[11px] text-gray-400">{Math.round(volume * 100)}%</span>
-          </label>
           <button
             type="button"
             onClick={onPrev}
