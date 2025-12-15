@@ -308,18 +308,6 @@ const UserProfile = ({ session, isModal = false, onClose, readOnly = false }) =>
         Following {followingCount} • Followers {followerCount}
       </p>
 
-      {error && (
-        <div className="bg-red-500 bg-opacity-25 text-red-100 p-3 rounded mb-4">
-          {error}
-        </div>
-      )}
-
-      {success && (
-        <div className="bg-green-500 bg-opacity-25 text-green-100 p-3 rounded mb-4">
-          {success}
-        </div>
-      )}
-
       {showPasswordReset ? (
         <PasswordResetRequest onClose={() => setShowPasswordReset(false)} />
       ) : (
@@ -385,6 +373,19 @@ const UserProfile = ({ session, isModal = false, onClose, readOnly = false }) =>
           >
             {loading ? 'Saving...' : 'Update Profile'}
           </button>
+
+          {/* Inline feedback for profile save */}
+          {error && (
+            <div className="bg-red-500 bg-opacity-20 text-red-100 p-3 rounded">
+              {error}
+            </div>
+          )}
+
+          {success && (
+            <div className="bg-green-500 bg-opacity-20 text-green-100 p-3 rounded">
+              {success}
+            </div>
+          )}
 
           {/* Password reset section */}
           <div className="pt-2 border-t border-gray-800 mt-2">
