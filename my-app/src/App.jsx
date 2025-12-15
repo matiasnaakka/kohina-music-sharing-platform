@@ -657,7 +657,7 @@ const GlobalAudioPlayer = ({
         </div>
 
         <div className="flex items-center gap-3 ml-auto">
-          <label className="flex items-center gap-2 text-xs text-gray-300">
+          <label className="hidden sm:flex items-center gap-2 text-xs text-gray-300">
             🔊
             <input
               type="range"
@@ -674,15 +674,21 @@ const GlobalAudioPlayer = ({
           <button
             type="button"
             onClick={onPrev}
-            className="rounded-full border border-gray-600 px-2 py-1 text-sm text-gray-200 hover:bg-gray-800"
+            className="px-2 py-1 text-sm text-gray-200 hover:bg-gray-800"
             disabled={!canNavigate || loading}
+            aria-label="Previous track"
           >
-            ◀ Prev
+            <img
+              src="/images/previous-svgrepo-com.svg"
+              alt="Previous track"
+              className="h-10 w-10"
+              loading="lazy"
+            />
           </button>
           <button
             type="button"
             onClick={isPlaying ? pause : resume}
-            className="rounded-full bg-teal-500 px-3 py-1 text-sm font-semibold text-black hover:bg-teal-400 disabled:opacity-60"
+            className="rounded-full bg-amber-500 px-3 py-1 text-sm font-semibold hover:bg-amber-600 disabled:opacity-60"
             disabled={loading}
           >
             {isPlaying ? 'Pause' : 'Play'}
@@ -690,10 +696,18 @@ const GlobalAudioPlayer = ({
           <button
             type="button"
             onClick={onNext}
-            className="rounded-full border border-gray-600 px-2 py-1 text-sm text-gray-200 hover:bg-gray-800"
+            className="px-2 py-1 text-sm text-gray-200 hover:bg-gray-800"
             disabled={!canNavigate || loading}
+            aria-label="Next track"
           >
-            Next ▶
+            <img
+              src="/images/next-svgrepo-com.svg"
+              alt="Next track"
+              className="h-10 w-10"
+              loading="lazy"
+              width="80"
+              height="80"
+            />
           </button>
           <button
             type="button"
