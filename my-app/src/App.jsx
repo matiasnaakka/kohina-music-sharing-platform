@@ -699,7 +699,7 @@ const GlobalAudioPlayer = ({
             onClick={withStop(() => setIsFullscreen(false))}
             className="mt-2 px-4 py-2 rounded border border-gray-600 text-gray-200 hover:bg-gray-800"
           >
-            Close
+            Close player
           </button>
         </div>
       )}
