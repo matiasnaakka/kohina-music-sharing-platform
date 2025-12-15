@@ -40,4 +40,5 @@ div[data-testid="auth"] label {
   color: #0f172a !important;
   border: 1px solid #e5e7eb !important;
   border-radius: 8px !important;
+  font-size: 16px !important; /* prevent iOS zoom */
 }
