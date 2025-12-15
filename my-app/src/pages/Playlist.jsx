@@ -200,7 +200,7 @@ export default function Playlist({ session, player }) {
                 if (isActive) {
                   player.isPlaying ? player.pause() : player.resume()
                 } else {
-                  player.playTrack(track)
+                  player.playTrack(track, tracks)
                 }
               }
               const trackIsLiked = isLiked(track.id)

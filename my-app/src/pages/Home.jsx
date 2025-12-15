@@ -385,7 +385,7 @@ export default function Home({ session, player }) {
                 if (isActive) {
                   player.isPlaying ? player.pause() : player.resume()
                 } else {
-                  player.playTrack(track)
+                  player.playTrack(track, displayedTracks)
                 }
               }
               const trackIsLiked = isLiked(track.id)

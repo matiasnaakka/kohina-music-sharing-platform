@@ -38,7 +38,7 @@ export default function TracksList({
           if (isActive) {
             player.isPlaying ? player.pause() : player.resume()
           } else {
-            player.playTrack(track)
+            player.playTrack(track, tracks)
           }
         }
         const trackIsLiked = isTrackLiked(track.id)

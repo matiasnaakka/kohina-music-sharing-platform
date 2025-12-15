@@ -22,6 +22,9 @@ const App = () => {
   const [playerState, setPlayerState] = useState(initialPlayerState)
   const [session, setSession] = useState(null)
   const audioRef = useRef(null)
+  const [volume, setVolume] = useState(0.8) // default 80%
+  const [queue, setQueue] = useState([])
+  const [queueIndex, setQueueIndex] = useState(0)
 
   // Fetch current session on mount
   useEffect(() => {
@@ -46,7 +49,7 @@ const App = () => {
    * playTrack
    * - Given a track record, create a signed URL for the audio file and start playback.
    */
-  const playTrack = useCallback(async (track) => {
+  const playTrack = useCallback(async (track, queueList = []) => {
     if (!track?.audio_path) {
       setPlayerState({
         track,
@@ -57,6 +60,19 @@ const App = () => {
       })
       return
     }
+
+    // Build/remember queue
+    const normalized = Array.isArray(queueList) ? queueList.filter((t) => t?.id) : []
+    const baseQueue = normalized.length ? normalized : [track]
+    let idx = baseQueue.findIndex((t) => t.id === track.id)
+    const finalQueue = [...baseQueue]
+    if (idx < 0) {
+      finalQueue.push(track)
+      idx = finalQueue.length - 1
+    }
+    setQueue(finalQueue)
+    setQueueIndex(idx)
+
     setPlayerState((prev) => ({
       ...prev,
       track,
@@ -133,8 +149,22 @@ const App = () => {
       audio.removeAttribute('src')
       audio.load()
     }
+    setQueue([])
+    setQueueIndex(0)
     setPlayerState(initialPlayerState)
   }, [])
+
+  const nextTrack = useCallback(() => {
+    if (!queue.length) return
+    const nextIdx = (queueIndex + 1) % queue.length
+    playTrack(queue[nextIdx], queue)
+  }, [queue, queueIndex, playTrack])
+
+  const prevTrack = useCallback(() => {
+    if (!queue.length) return
+    const prevIdx = (queueIndex - 1 + queue.length) % queue.length
+    playTrack(queue[prevIdx], queue)
+  }, [queue, queueIndex, playTrack])
 
   useEffect(() => {
     const audio = audioRef.current
@@ -203,8 +233,11 @@ const App = () => {
       pause,
       resume,
       stop,
+      next: nextTrack,
+      previous: prevTrack,
+      queueLength: queue.length,
     }),
-    [playerState, playTrack, pause, resume, stop],
+    [playerState, playTrack, pause, resume, stop, nextTrack, prevTrack, queue.length],
   )
 
   // Add basic SEO/meta and connection hints
@@ -380,6 +413,11 @@ const App = () => {
     return () => style.remove()
   }, [])
 
+  useEffect(() => {
+    const audio = audioRef.current
+    if (audio) audio.volume = volume
+  }, [volume])
+
   return (
     <>
       <Routing player={player} />
@@ -390,13 +428,30 @@ const App = () => {
         resume={resume}
         stop={stop}
         session={session}
+        volume={volume}
+        setVolume={setVolume}
+        onNext={nextTrack}
+        onPrev={prevTrack}
+        canNavigate={queue.length > 1}
       />
     </>
   )
 }
 
 // GlobalAudioPlayer component renders the bottom player UI
-const GlobalAudioPlayer = ({ audioRef, playerState, pause, resume, stop, session }) => {
+const GlobalAudioPlayer = ({
+  audioRef,
+  playerState,
+  pause,
+  resume,
+  stop,
+  session,
+  volume,
+  setVolume,
+  onNext,
+  onPrev,
+  canNavigate,
+}) => {
   const { track, isPlaying, loading, error } = playerState
   const { increment: incrementPlayCount } = useIncrementPlayCount()
   const timerRef = useRef(null)
@@ -536,6 +591,13 @@ const GlobalAudioPlayer = ({ audioRef, playerState, pause, resume, stop, session
     setProgress(ratio)
   }
 
+  const handleVolume = (e) => {
+    const next = Number(e.target.value)
+    setVolume(next)
+    const audio = audioRef.current
+    if (audio) audio.volume = next
+  }
+
   if (!track) return null
 
   const coverSrc = track.image_path ? getPublicStorageUrl('track-images', track.image_path) : null
@@ -595,6 +657,28 @@ const GlobalAudioPlayer = ({ audioRef, playerState, pause, resume, stop, session
         </div>
 
         <div className="flex items-center gap-3 ml-auto">
+          <label className="flex items-center gap-2 text-xs text-gray-300">
+            🔊
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.05"
+              value={volume}
+              onChange={handleVolume}
+              className="w-24 accent-teal-400"
+              aria-label="Volume"
+            />
+            <span className="w-8 tabular-nums text-[11px] text-gray-400">{Math.round(volume * 100)}%</span>
+          </label>
+          <button
+            type="button"
+            onClick={onPrev}
+            className="rounded-full border border-gray-600 px-2 py-1 text-sm text-gray-200 hover:bg-gray-800"
+            disabled={!canNavigate || loading}
+          >
+            ◀ Prev
+          </button>
           <button
             type="button"
             onClick={isPlaying ? pause : resume}
@@ -602,6 +686,14 @@ const GlobalAudioPlayer = ({ audioRef, playerState, pause, resume, stop, session
             disabled={loading}
           >
             {isPlaying ? 'Pause' : 'Play'}
+          </button>
+          <button
+            type="button"
+            onClick={onNext}
+            className="rounded-full border border-gray-600 px-2 py-1 text-sm text-gray-200 hover:bg-gray-800"
+            disabled={!canNavigate || loading}
+          >
+            Next ▶
           </button>
           <button
             type="button"

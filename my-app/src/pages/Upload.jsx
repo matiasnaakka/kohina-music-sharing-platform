@@ -698,7 +698,7 @@ export default function Upload({ session, player }) {
                 if (isActive) {
                   player.isPlaying ? player.pause() : player.resume()
                 } else {
-                  player.playTrack(track)
+                  player.playTrack(track, tracks)
                 }
               }
               return (
