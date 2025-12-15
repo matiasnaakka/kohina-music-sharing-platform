@@ -65,7 +65,7 @@ const NavBar = ({ session, onSignOut }) => {
               Profile
             </Link>
             <Link to="/upload" className="text-white hover:underline text-sm md:text-base">
-              Manage uploads
+              Upload
             </Link>
 
             {/* Profile avatar */}
