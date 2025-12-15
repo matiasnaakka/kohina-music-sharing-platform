@@ -2,7 +2,7 @@ import './index.css'
 import { useState, useEffect, useMemo } from 'react'
 import { Auth } from '@supabase/auth-ui-react'
 import { ThemeSupa } from '@supabase/auth-ui-shared'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, Link } from 'react-router-dom'
 import { supabase } from './supabaseclient'
 import Home from './pages/Home'
 import ProtectedRoute from './components/protectedRoutes'
@@ -11,6 +11,8 @@ import Profile from './pages/Profile'
 import Upload from './pages/Upload'
 import PasswordResetForm from './components/PasswordResetForm'
 import Playlist from './pages/Playlist'
+import Privacy from './pages/Privacy'
+import Terms from './pages/Terms'
 
 const customAppearance = {
   theme: {
@@ -81,13 +83,24 @@ const Routing = ({ player }) => {
               <Navigate to="/home" replace />
             ) : (
               <LoginLayout>
-                <Auth
-                  supabaseClient={supabase}
-                  appearance={customAppearance}
-                  providers={['google', 'facebook', 'apple']}
-                  // Ensures external auth flows return into the SPA route on Cloudflare Pages
-                  redirectTo={redirectToHome}
-                />
+                <div className="space-y-4">
+                  <Auth
+                    supabaseClient={supabase}
+                    appearance={customAppearance}
+                    providers={['google', 'facebook', 'apple']}
+                    // Ensures external auth flows return into the SPA route on Cloudflare Pages
+                    redirectTo={redirectToHome}
+                  />
+                  <div className="text-center text-sm text-gray-300">
+                    <Link to="/privacy" className="hover:text-teal-300 underline">
+                      Privacy Policy
+                    </Link>
+                    <span className="mx-2 text-gray-500">•</span>
+                    <Link to="/terms" className="hover:text-teal-300 underline">
+                      Terms of Service
+                    </Link>
+                  </div>
+                </div>
               </LoginLayout>
             )
           }
@@ -139,6 +152,8 @@ const Routing = ({ player }) => {
             </ProtectedRoute>
           }
         />
+        <Route path="/privacy" element={<Privacy />} />
+        <Route path="/terms" element={<Terms />} />
       </Routes>
     </BrowserRouter>
   )
