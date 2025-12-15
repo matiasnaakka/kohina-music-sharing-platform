@@ -12,6 +12,105 @@ const sanitizeFileName = (name) => {
   return name.replace(/[^a-z0-9.\-_]/gi, '').replace(/\s+/g, '-').toLowerCase()
 }
 
+const BYTES_PER_MB = 1024 * 1024
+const MAX_IMAGE_MB = 5
+const MAX_AUDIO_MB = 10
+const ALLOWED_AUDIO_TYPES = ['audio/mpeg', 'audio/wav', 'audio/x-wav', 'audio/aac', 'audio/ogg', 'audio/flac']
+const TRANSCODE_AUDIO_TYPES = ['audio/wav', 'audio/x-wav', 'audio/flac']
+const MAX_TRANSCODE_DURATION_SEC = 240 // avoid long waits
+
+const pickSupportedMime = () => {
+  const candidates = [
+    'audio/ogg;codecs=opus',
+    'audio/ogg',
+    'audio/mpeg', // mp3
+    'audio/mp4;codecs=mp4a.40.2', // aac/mp4
+  ]
+  for (const c of candidates) {
+    if (MediaRecorder?.isTypeSupported?.(c)) return c
+  }
+  return null
+}
+
+// Faster guard: only transcode bulky WAV/FLAC to allowed mime when over limit; otherwise just validate
+const compressAudioIfNeeded = async (file) => {
+  if (!file) throw new Error('No audio file provided.')
+  if (!ALLOWED_AUDIO_TYPES.includes(file.type)) {
+    throw new Error('Unsupported audio type. Please upload mp3, wav, aac, ogg, or flac under 10MB.')
+  }
+  if (file.size <= MAX_AUDIO_MB * BYTES_PER_MB) return file
+
+  if (!TRANSCODE_AUDIO_TYPES.includes(file.type)) {
+    throw new Error('Audio is over 10MB. Please compress to MP3/OGG/AAC under 10MB before uploading.')
+  }
+
+  const mime = pickSupportedMime()
+  if (!mime || typeof AudioContext === 'undefined') {
+    throw new Error('Browser cannot compress this audio. Please compress to MP3/OGG/AAC under 10MB and retry.')
+  }
+
+  const buffer = await file.arrayBuffer()
+  const audioCtx = new AudioContext()
+  const decoded = await audioCtx.decodeAudioData(buffer.slice(0))
+
+  if (decoded.duration > MAX_TRANSCODE_DURATION_SEC) {
+    audioCtx.close()
+    throw new Error(`Audio is too long to compress in-browser (> ${Math.round(MAX_TRANSCODE_DURATION_SEC / 60)} min). Please compress offline under 10MB.`)
+  }
+
+  const destination = audioCtx.createMediaStreamDestination()
+  const source = audioCtx.createBufferSource()
+  source.buffer = decoded
+  source.connect(destination)
+
+  const recorder = new MediaRecorder(destination.stream, { mimeType: mime, audioBitsPerSecond: 128000 })
+  const chunks = []
+  recorder.ondataavailable = (e) => e.data && chunks.push(e.data)
+
+  const stopped = new Promise((resolve, reject) => {
+    recorder.onstop = resolve
+    recorder.onerror = (ev) => reject(ev.error || new Error('Transcode failed'))
+  })
+
+  // Ensure we stop when the buffer finishes playing
+  source.onended = () => {
+    if (recorder.state === 'recording') recorder.stop()
+  }
+
+  recorder.start()
+  source.start()
+
+  const timeoutMs = decoded.duration * 1000 + 5000
+  const result = await Promise.race([
+    stopped,
+    new Promise((resolve) => setTimeout(() => resolve('timeout'), timeoutMs)),
+  ])
+
+  if (result === 'timeout') {
+    if (recorder.state === 'recording') recorder.stop()
+    source.stop()
+    audioCtx.close()
+    throw new Error('Transcode timed out')
+  }
+
+  // Ensure recorder is stopped before continuing
+  if (recorder.state === 'recording') recorder.stop()
+  await stopped
+  audioCtx.close()
+
+  const outBlob = new Blob(chunks, { type: mime })
+  if (!outBlob.size || outBlob.size >= file.size) {
+    throw new Error('Could not shrink audio below 10MB. Please compress externally and retry.')
+  }
+  if (outBlob.size > MAX_AUDIO_MB * BYTES_PER_MB) {
+    throw new Error('Audio is still over 10MB after compression. Please compress externally.')
+  }
+
+  const targetExt = mime.includes('ogg') ? 'ogg' : mime.includes('mpeg') ? 'mp3' : 'm4a'
+  const newName = `${file.name.replace(/\.[^.]+$/, '')}.${targetExt}`
+  return new File([outBlob], newName, { type: mime.includes('mp4') ? 'audio/aac' : mime })
+}
+
 export default function Upload({ session, player }) {
   const [title, setTitle] = useState('')
   const [artist, setArtist] = useState('')
@@ -105,12 +204,14 @@ export default function Upload({ session, player }) {
     }
   }
   
-  const handleFileChange = (e) => {
+  const handleFileChange = async (e) => {
     const selectedFile = e.target.files?.[0]
+    if (!selectedFile) return
+    // Allow larger upfront so we can attempt compression/transcode before rejecting
     const v = validateFileUpload(selectedFile, {
-      maxSizeMB: 10,
-      allowedTypes: ['audio/mpeg', 'audio/wav', 'audio/ogg'],
-      allowedExtensions: ['.mp3', '.wav', '.ogg'],
+      maxSizeMB: 100,
+      allowedTypes: ALLOWED_AUDIO_TYPES,
+      allowedExtensions: ['.mp3', '.wav', '.ogg', '.aac', '.flac'],
     })
     if (!v.isValid) {
       setError(v.error)
@@ -119,13 +220,32 @@ export default function Upload({ session, player }) {
       return
     }
     setError(null)
+    setSuccess(null)
+    // Keep the original selection so the form doesn't think it's empty
     setFile(selectedFile)
+    try {
+      const validated = await compressAudioIfNeeded(selectedFile)
+      if (validated.size > MAX_AUDIO_MB * BYTES_PER_MB) {
+        throw new Error('Audio is too large after compression. Please keep it under 10MB.')
+      }
+      setFile(validated)
+      if (validated !== selectedFile) setSuccess('Audio compressed for upload.')
+    } catch (err) {
+      setError(err.message)
+      // Only clear if we truly cannot proceed (e.g., still >10MB or unsupported)
+      if (selectedFile.size > MAX_AUDIO_MB * BYTES_PER_MB) {
+        setFile(null)
+        e.target.value = ''
+      }
+    }
   }
   
-  const handleImageChange = (e) => {
+  const handleImageChange = async (e) => {
     const selectedImage = e.target.files?.[0]
+    if (!selectedImage) return
+    // Permit larger upfront; enforce 5MB after compression
     const v = validateFileUpload(selectedImage, {
-      maxSizeMB: 5,
+      maxSizeMB: 50,
       allowedTypes: ['image/jpeg', 'image/png', 'image/webp', 'image/gif'],
       allowedExtensions: ['.jpg', '.jpeg', '.png', '.webp', '.gif'],
     })
@@ -136,7 +256,33 @@ export default function Upload({ session, player }) {
       return
     }
     setError(null)
-    setImageFile(selectedImage || null)
+    // Keep original so form isn't empty while compressing
+    setImageFile(selectedImage)
+    try {
+      const compressOptions = { maxSizeMB: 0.8, maxWidthOrHeight: 512, useWebWorker: true, initialQuality: 0.8 }
+      let compressedBlob
+      try {
+        compressedBlob = await imageCompression(selectedImage, compressOptions)
+      } catch (compErr) {
+        console.warn('Image compression failed, using original image', compErr)
+        compressedBlob = selectedImage
+      }
+      const compressedFile = new File(
+        [compressedBlob],
+        `${Date.now()}-${sanitizeFileName(selectedImage.name)}`,
+        { type: compressedBlob.type || selectedImage.type }
+      )
+      if (compressedFile.size > MAX_IMAGE_MB * BYTES_PER_MB) {
+        throw new Error('Cover image is too large after compression. Please keep it under 5MB.')
+      }
+      setImageFile(compressedFile)
+    } catch (err) {
+      setError(err.message)
+      if (selectedImage.size > MAX_IMAGE_MB * BYTES_PER_MB) {
+        setImageFile(null)
+        e.target.value = ''
+      }
+    }
   }
 
   const handleGenreSelect = (id) => {
@@ -178,15 +324,16 @@ export default function Upload({ session, player }) {
     setSuccess(null)
     
     try {
-      const fileName = `${Date.now()}-${sanitizeFileName(file.name)}`
+      const audioToUpload = await compressAudioIfNeeded(file)
+      const fileName = `${Date.now()}-${sanitizeFileName(audioToUpload.name)}`
       const filePath = `${session.user.id}/${fileName}`
       
-      console.log('Uploading file:', { filePath, fileType: file.type, fileSize: file.size })
+      console.log('Uploading file:', { filePath, fileType: audioToUpload.type, fileSize: audioToUpload.size })
       
       // 2. Upload audio file
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('audio')
-        .upload(filePath, file, { upsert: true })
+        .upload(filePath, audioToUpload, { upsert: true })
       
       console.log('Upload response:', { uploadData, uploadError })
       
@@ -196,8 +343,8 @@ export default function Upload({ session, player }) {
       
       // Compress cover image before upload to avoid server-side size limits (5MB)
       const compressOptions = {
-        maxSizeMB: 0.8,           // smaller target size
-        maxWidthOrHeight: 512,    // downscale covers to ~512px
+        maxSizeMB: 0.8,
+        maxWidthOrHeight: 512,
         useWebWorker: true,
         initialQuality: 0.8,
       }
@@ -209,14 +356,13 @@ export default function Upload({ session, player }) {
         compressedBlob = imageFile
       }
 
-      // Ensure compressed result is a File with the original filename
       const compressedFile = new File(
         [compressedBlob],
         `${Date.now()}-${sanitizeFileName(imageFile.name)}`,
         { type: compressedBlob.type || imageFile.type }
       )
 
-      if (compressedFile.size > 5 * 1024 * 1024) {
+      if (compressedFile.size > MAX_IMAGE_MB * BYTES_PER_MB) {
         throw new Error('Cover image is too large even after compression. Please choose a smaller image (<5MB).')
       }
 
@@ -240,8 +386,8 @@ export default function Upload({ session, player }) {
         genre_id: genreId, // Use the selected genre ID
         album,
         audio_path: filePath,
-        mime_type: file.type,
-        file_size: file.size,
+        mime_type: audioToUpload.type,
+        file_size: audioToUpload.size,
         is_public: isPublic,
         image_path: imageUploadData?.path || imagePath
       }
