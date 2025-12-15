@@ -22,6 +22,7 @@ const App = () => {
   const [playerState, setPlayerState] = useState(initialPlayerState)
   const [session, setSession] = useState(null)
   const audioRef = useRef(null)
+  const lastPlayPromiseRef = useRef(null)
   const [volume, setVolume] = useState(0.8) // default 80%
   const [queue, setQueue] = useState([])
   const [queueIndex, setQueueIndex] = useState(0)
@@ -43,6 +44,12 @@ const App = () => {
     })
 
     return () => subscription?.unsubscribe()
+  }, [])
+
+  const isBenignPlayInterruption = useCallback((err) => {
+    if (!err) return false
+    const msg = err.message || ''
+    return err.name === 'AbortError' || /interrupted by a call to pause|interrupted by a new load request/i.test(msg)
   }, [])
 
   /**
@@ -122,8 +129,9 @@ const App = () => {
     const audio = audioRef.current
     if (!audio) return
     setPlayerState((prev) => ({ ...prev, loading: true, error: null }))
-    audio
-      .play()
+    const playPromise = audio.play()
+    lastPlayPromiseRef.current = playPromise
+    playPromise
       .then(() => {
         setPlayerState((prev) => ({
           ...prev,
@@ -132,14 +140,19 @@ const App = () => {
           error: null,
         }))
       })
-      .catch((err) =>
+      .catch((err) => {
+        if (isBenignPlayInterruption(err)) {
+          setPlayerState((prev) => ({ ...prev, loading: false, isPlaying: false, error: null }))
+          return
+        }
         setPlayerState((prev) => ({
           ...prev,
           loading: false,
+          isPlaying: false,
           error: err.message,
-        })),
-      )
-  }, [])
+        }))
+      })
+  }, [isBenignPlayInterruption])
 
   const stop = useCallback(() => {
     const audio = audioRef.current
@@ -211,16 +224,31 @@ const App = () => {
     const audio = audioRef.current
     if (!audio || !playerState.signedUrl) return
     audio.src = playerState.signedUrl
-    audio
-      .play()
-      .catch((err) =>
+    setPlayerState((prev) => ({ ...prev, loading: true, error: null }))
+    const playPromise = audio.play()
+    lastPlayPromiseRef.current = playPromise
+    playPromise
+      .then(() => {
+        setPlayerState((prev) => ({
+          ...prev,
+          isPlaying: true,
+          loading: false,
+          error: null,
+        }))
+      })
+      .catch((err) => {
+        if (isBenignPlayInterruption(err)) {
+          setPlayerState((prev) => ({ ...prev, loading: false, isPlaying: false, error: null }))
+          return
+        }
         setPlayerState((prev) => ({
           ...prev,
           error: err.message,
           isPlaying: false,
-        })),
-      )
-  }, [playerState.signedUrl])
+          loading: false,
+        }))
+      })
+  }, [playerState.signedUrl, isBenignPlayInterruption])
 
   // player object passed to pages for controlling playback
   const player = useMemo(
@@ -642,7 +670,7 @@ const GlobalAudioPlayer = ({
             >
               <div className="absolute inset-0 rounded-full bg-gray-800" />
               <div
-                className="absolute inset-y-0 left-0 rounded-full bg-amber-500 transition-[width] duration-150"
+                className="absolute inset-y-0 left-0 rounded-full bg-amber-200 transition-[width] duration-150"
                 style={{ width: `${(progress || 0) * 100}%` }}
               />
             </div>
@@ -671,7 +699,7 @@ const GlobalAudioPlayer = ({
             <button
               type="button"
               onClick={withStop(isPlaying ? pause : resume)}
-              className="px-4 py-2 rounded bg-amber-500 text-black font-semibold hover:bg-amber-600 disabled:opacity-60"
+              className="px-4 py-2 rounded bg-amber-300 text-black font-semibold hover:bg-amber-300 disabled:opacity-60"
               disabled={loading}
             >
               {isPlaying ? 'Pause' : 'Play'}
@@ -742,7 +770,7 @@ const GlobalAudioPlayer = ({
               >
                 <div className="absolute inset-y-0 left-0 rounded-full bg-gray-700" />
                 <div
-                  className="absolute inset-y-0 left-0 rounded-full bg-amber-500 transition-[width] duration-150"
+                  className="absolute inset-y-0 left-0 rounded-full bg-amber-200 transition-[width] duration-150"
                   style={{ width: `${(progress || 0) * 100}%` }}
                 />
               </div>
@@ -772,7 +800,7 @@ const GlobalAudioPlayer = ({
             <button
               type="button"
               onClick={withStop(isPlaying ? pause : resume)}
-              className="rounded-full bg-amber-500 px-3 py-1 text-sm font-semibold hover:bg-amber-600 disabled:opacity-60"
+              className="rounded-full bg-amber-300 px-3 py-1 text-black text-sm font-semibold hover:bg-amber-600 disabled:opacity-60"
               disabled={loading}
             >
               {isPlaying ? 'Pause' : 'Play'}

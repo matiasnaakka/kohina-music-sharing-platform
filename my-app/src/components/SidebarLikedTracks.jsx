@@ -80,7 +80,7 @@ export default function SidebarLikedTracks({
                     type="button"
                     onClick={handlePlayback}
                     disabled={isBusy}
-                    className="bg-teal-500 text-black px-1.5 py-0.5 rounded text-xs font-semibold hover:bg-teal-400 disabled:opacity-60"
+                    className="bg-amber-300 text-black px-1.5 py-0.5 rounded text-xs font-semibold hover:bg-teal-400 disabled:opacity-60"
                   >
                     {playbackLabel}
                   </button>

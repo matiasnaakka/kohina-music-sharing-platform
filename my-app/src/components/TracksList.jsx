@@ -85,7 +85,7 @@ export default function TracksList({
                         type="button"
                         onClick={handlePlayback}
                         disabled={isBusy}
-                        className="bg-teal-500 text-black px-3 py-1 rounded text-sm font-semibold hover:bg-teal-400 disabled:opacity-60"
+                        className="bg-amber-300 text-black px-3 py-1 rounded text-sm font-semibold hover:bg-teal-400 disabled:opacity-60"
                       >
                         {playbackLabel}
                       </button>
