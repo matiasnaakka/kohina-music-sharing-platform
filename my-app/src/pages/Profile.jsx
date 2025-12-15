@@ -495,7 +495,7 @@ export default function Profile({ session, player }) {
       <NavBar session={session} onSignOut={handleSignOut} />
       {isOwnProfile ? (
         <>
-          <div className="max-w-4xl mx-auto mt-16 p-6 bg-black bg-opacity-80 rounded-lg text-white pb-32 md:pb-6">
+          <div className="max-w-5xl mx-auto mt-16 p-6 bg-black bg-opacity-80 rounded-lg text-white pb-32 md:pb-6">
             {ownHeaderLoading ? (
               <div>Loading profile...</div>
             ) : ownHeaderError ? (
@@ -515,7 +515,7 @@ export default function Profile({ session, player }) {
                 />
                 <h3 className="text-2xl font-bold mb-4">Tracks</h3>
                 <div className="flex flex-col lg:flex-row gap-6">
-                  <div className="flex-1">
+                  <div className="flex-[1.2] min-w-0">
                     <TracksList
                       tracks={ownTracks}
                       loading={ownTracksLoading}
@@ -532,7 +532,7 @@ export default function Profile({ session, player }) {
                       emptyMessage="You haven't uploaded any tracks yet."
                     />
                   </div>
-                  <div className="lg:w-72 space-y-6">
+                  <div className="lg:w-64 space-y-6">
                     <SidebarPlaylists
                       title="Public playlists"
                       playlists={ownPlaylists}
@@ -571,7 +571,7 @@ export default function Profile({ session, player }) {
           />
         </>
       ) : (
-        <div className="max-w-4xl mx-auto mt-16 p-6 bg-black bg-opacity-80 rounded-lg text-white pb-32 md:pb-6">
+        <div className="max-w-5xl mx-auto mt-16 p-6 bg-black bg-opacity-80 rounded-lg text-white pb-32 md:pb-6">
           {publicLoading ? (
             <div>Loading profile...</div>
           ) : publicError ? (
@@ -594,7 +594,7 @@ export default function Profile({ session, player }) {
               />
               <h3 className="text-2xl font-bold mb-4">Tracks</h3>
               <div className="flex flex-col lg:flex-row gap-6">
-                <div className="flex-1">
+                <div className="flex-[1.2] min-w-0">
                   <TracksList
                     tracks={publicTracks}
                     loading={false}
@@ -611,7 +611,7 @@ export default function Profile({ session, player }) {
                     emptyMessage="No public tracks yet."
                   />
                 </div>
-                <div className="lg:w-72 space-y-6">
+                <div className="lg:w-64 space-y-6">
                   <SidebarPlaylists
                     title="Public playlists"
                     playlists={publicPlaylists}
