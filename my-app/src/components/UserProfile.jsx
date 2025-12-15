@@ -380,7 +380,7 @@ const UserProfile = ({ session, isModal = false, onClose, readOnly = false }) =>
           </label>
           <button
             type="submit"
-            className="bg-teal-400 text-white px-4 py-2 rounded font-bold hover:bg-teal-300"
+            className="btn-accent px-4 py-2 rounded-lg font-semibold shadow-sm hover:brightness-105 focus:outline-none focus:ring-2 focus:ring-teal-400/60 focus:ring-offset-2 focus:ring-offset-black disabled:opacity-60"
             disabled={loading}
           >
             {loading ? 'Saving...' : 'Update Profile'}
