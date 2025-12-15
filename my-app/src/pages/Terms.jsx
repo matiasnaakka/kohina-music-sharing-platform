@@ -20,7 +20,7 @@ export default function Terms() {
           </p>
           <p>
             Data is stored with Supabase. Please review our Privacy Policy for how we handle personal data. For
-            questions, contact <a href="mailto:matias5230@gmail.com" className="text-teal-300 underline">support@example.com</a>.
+            questions, contact <a href="mailto:matias5230@gmail.com" className="text-teal-300 underline">matias5230@gmail.com</a>.
           </p>
         </section>
 

@@ -24,7 +24,7 @@ export default function Privacy() {
             logins follow the respective provider&apos;s terms.
           </p>
           <p>
-            For questions or requests (access, correction, deletion), contact us at <a href="mailto:privacy@example.com" className="text-teal-300 underline">privacy@example.com</a>.
+            For questions or requests (access, correction, deletion), contact us at <a href="mailto:matias5230@gmail.com" className="text-teal-300 underline">matias5230@gmail.com</a>.
           </p>
         </section>
 
