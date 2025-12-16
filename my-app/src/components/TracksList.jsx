@@ -28,7 +28,7 @@ export default function TracksList({
     <div className="grid grid-cols-1 gap-5">
       {tracks.map((track, idx) => {
         const coverSrc =
-          getPublicStorageUrl('track-images', track.image_path) || profileAvatar || '/default-avatar.png'
+          getPublicStorageUrl('track-images', track.image_path) || profileAvatar || '/images/default-avatar.png'
         const isActive = player?.currentTrack?.id === track.id
         const isBusy = isActive && player?.loading
         const canPlay = Boolean(track.audio_path)
@@ -48,7 +48,7 @@ export default function TracksList({
             <div className="card-elevated p-5 rounded-xl text-white flex gap-5 relative overflow-hidden">
               <div className="relative shrink-0">
                 <div
-                  className="absolute inset-0 rounded-xl bg-gradient-to-br from-teal-500/15 via-transparent to-amber-400/10 blur-lg"
+                  className="absolute inset-0 rounded-xl bg-linear-to-br from-teal-500/15 via-transparent to-amber-400/10 blur-lg"
                   aria-hidden="true"
                 />
                 <img
@@ -61,7 +61,7 @@ export default function TracksList({
                   fetchpriority={idx === 0 ? 'high' : undefined}
                   loading={idx === 0 ? 'eager' : 'lazy'}
                   onError={(e) => {
-                    e.target.src = profileAvatar || '/default-avatar.png'
+                    e.target.src = profileAvatar || '/images/default-avatar.png'
                   }}
                 />
               </div>
@@ -96,7 +96,7 @@ export default function TracksList({
                         {playbackLabel}
                       </button>
                       {isActive && player?.error && !player.loading && (
-                        <span className="max-w-[160px] truncate text-xs text-red-400">{player.error}</span>
+                        <span className="max-w-40 truncate text-xs text-red-400">{player.error}</span>
                       )}
                     </>
                   ) : (

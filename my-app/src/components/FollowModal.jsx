@@ -33,7 +33,7 @@ export default function FollowModal({ open, type, loading, error, users, onClose
                     className="w-full flex items-center gap-3 rounded bg-gray-800 hover:bg-gray-700 px-3 py-2 text-left"
                   >
                     <img
-                      src={u.avatar_url || '/default-avatar.png'}
+                      src={u.avatar_url || '/images/default-avatar.png'}
                       alt={u.username || 'User'}
                       className="w-10 h-10 rounded-full object-cover shrink-0"
                       width="40"
@@ -41,7 +41,7 @@ export default function FollowModal({ open, type, loading, error, users, onClose
                       loading="lazy"
                       decoding="async"
                       onError={(e) => {
-                        e.target.src = '/default-avatar.png'
+                        e.target.src = '/images/default-avatar.png'
                       }}
                     />
                     <div className="min-w-0">

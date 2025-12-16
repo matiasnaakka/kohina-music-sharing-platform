@@ -682,7 +682,7 @@ export default function Upload({ session, player }) {
               const coverSrc =
                 getPublicStorageUrl('track-images', track.image_path) ||
                 profileAvatarUrl ||
-                '/default-avatar.png'
+                '/images/default-avatar.png'
               const isActive = player?.currentTrack?.id === track.id
               const isBusy = isActive && player?.loading
               const canPlay = Boolean(track.audio_path)
@@ -707,7 +707,7 @@ export default function Upload({ session, player }) {
                     src={coverSrc}
                     alt={`${track.title} cover`}
                     className="w-24 h-24 object-cover rounded"
-                    onError={(e) => { e.target.src = profileAvatarUrl || '/default-avatar.png' }}
+                    onError={(e) => { e.target.src = profileAvatarUrl || '/images/default-avatar.png' }}
                   />
                   <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-2 flex-1">
                     <div>

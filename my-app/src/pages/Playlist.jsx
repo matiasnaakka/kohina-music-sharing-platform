@@ -184,7 +184,7 @@ export default function Playlist({ session, player }) {
               const coverSrc =
                 getPublicStorageUrl('track-images', track.image_path) ||
                 track.profiles?.avatar_url ||
-                '/default-avatar.png'
+                '/images/default-avatar.png'
               const isActive = player?.currentTrack?.id === track.id
               const isBusy = isActive && player?.loading
               const canPlay = Boolean(track.audio_path)
@@ -216,7 +216,7 @@ export default function Playlist({ session, player }) {
                       decoding="async"
                       fetchpriority={idx === 0 ? 'high' : undefined}
                       loading={idx === 0 ? 'eager' : 'lazy'}
-                      onError={(e) => { e.target.src = track.profiles?.avatar_url || '/default-avatar.png' }}
+                      onError={(e) => { e.target.src = track.profiles?.avatar_url || '/images/default-avatar.png' }}
                     />
                     <div className="flex flex-col md:flex-row justify-between flex-1 gap-2">
                       <div>

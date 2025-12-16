@@ -354,10 +354,10 @@ const UserProfile = ({ session, isModal = false, onClose, readOnly = false }) =>
         <div className="flex flex-col items-center mb-4">
           <img
             key={avatarKey}
-            src={profile.avatar_url ? `${profile.avatar_url}?t=${avatarKey}` : '/default-avatar.png'}
+            src={profile.avatar_url ? `${profile.avatar_url}?t=${avatarKey}` : '/images/default-avatar.png'}
             alt="Avatar"
             className="w-24 h-24 mb-3 object-cover"
-            onError={(e) => { e.target.src = '/default-avatar.png' }}
+            onError={(e) => { e.target.src = '/images/default-avatar.png' }}
           />
           <div className="w-full">
             <div className="mb-2">
@@ -421,10 +421,10 @@ const UserProfile = ({ session, isModal = false, onClose, readOnly = false }) =>
           <div className="flex flex-col items-center">
             <img
               key={avatarKey}
-              src={profile.avatar_url ? `${profile.avatar_url}?t=${avatarKey}` : '/default-avatar.png'}
+              src={profile.avatar_url ? `${profile.avatar_url}?t=${avatarKey}` : '/images/default-avatar.png'}
               alt="Avatar"
               className="w-24 h-24 mb-2 object-cover"
-              onError={(e) => { e.target.src = '/default-avatar.png' }}
+              onError={(e) => { e.target.src = '/images/default-avatar.png' }}
             />
             <div className="flex flex-col items-center">
               <input

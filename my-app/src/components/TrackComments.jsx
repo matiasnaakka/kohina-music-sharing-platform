@@ -131,10 +131,10 @@ const TrackComments = ({ trackId, session }) => {
                   title={comment.profiles?.username || 'User profile'}
                 >
                   <img
-                    src={comment.profiles?.avatar_url || '/default-avatar.png'}
+                    src={comment.profiles?.avatar_url || '/images/default-avatar.png'}
                     alt={comment.profiles?.username || 'User'}
                     className="w-10 h-10 rounded-full object-cover"
-                    onError={(e) => { e.target.src = '/default-avatar.png' }}
+                    onError={(e) => { e.target.src = '/images/default-avatar.png' }}
                   />
                 </button>
                 <div className="flex-1 min-w-0">

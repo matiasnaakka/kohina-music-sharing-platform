@@ -119,7 +119,6 @@ export default function Profile({ session, player }) {
           .single()
         if (profileError) throw profileError
         if (!profileData) throw new Error('Profile not found')
-
         const { data: tracksData, error: tracksError } = await supabase
           .from('tracks')
           .select(`
@@ -198,6 +197,7 @@ export default function Profile({ session, player }) {
         if (isMounted) {
           setPublicLoading(false)
           setPublicPlaylistsLoading(false)
+          console.log(profileData, "what is this")
         }
       }
     }

@@ -32,7 +32,7 @@ export default function SidebarLikedTracks({
           const coverSrc =
             getPublicStorageUrl('track-images', track.image_path) ||
             track.profiles?.avatar_url ||
-            '/default-avatar.png'
+            '/images/default-avatar.png'
           const isActive = player?.currentTrack?.id === track.id
           const isBusy = isActive && player?.loading
           const canPlay = Boolean(track.audio_path)
@@ -59,7 +59,7 @@ export default function SidebarLikedTracks({
                   decoding="async"
                   loading="lazy"
                   onError={(e) => {
-                    e.target.src = track.profiles?.avatar_url || '/default-avatar.png'
+                    e.target.src = track.profiles?.avatar_url || '/images/default-avatar.png'
                   }}
                 />
                 <div className="min-w-0 flex-1">

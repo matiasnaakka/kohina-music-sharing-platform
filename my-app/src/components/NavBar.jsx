@@ -70,7 +70,7 @@ const NavBar = ({ session, onSignOut }) => {
 
             {/* Profile avatar */}
             <img
-              src={avatarUrl || '/default-avatar.png'}
+              src={avatarUrl || '/images/default-avatar.png'}
               alt={session.user.email || 'User avatar'}
               title={session.user.email}
               className="w-8 h-8 rounded-full object-cover border border-gray-700"
@@ -79,7 +79,7 @@ const NavBar = ({ session, onSignOut }) => {
               decoding="async"
               fetchpriority="high"
               loading="eager"
-              onError={(e) => { e.target.src = '/default-avatar.png' }}
+              onError={(e) => { e.target.src = '/images/default-avatar.png' }}
             />
 
             <button
@@ -93,7 +93,7 @@ const NavBar = ({ session, onSignOut }) => {
           {/* Mobile Menu Button */}
           <div className="sm:hidden flex items-center gap-3">
             <img
-              src={avatarUrl || '/default-avatar.png'}
+              src={avatarUrl || '/images/default-avatar.png'}
               alt={session.user.email || 'User avatar'}
               title={session.user.email}
               className="w-7 h-7 rounded-full object-cover border border-gray-700"
@@ -102,7 +102,7 @@ const NavBar = ({ session, onSignOut }) => {
               decoding="async"
               fetchpriority="high"
               loading="eager"
-              onError={(e) => { e.target.src = '/default-avatar.png' }}
+              onError={(e) => { e.target.src = '/images/default-avatar.png' }}
             />
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}

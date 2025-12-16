@@ -325,7 +325,7 @@ const App = () => {
           const CORE_ASSETS = [
             '/',
             '/index.html',
-            '/default-avatar.png'
+            '/images/default-avatar.png'
           ]
 
           self.addEventListener('install', (event) => {
@@ -641,7 +641,9 @@ const GlobalAudioPlayer = ({
     track.cover_url ||
     track.profiles?.avatar_url ||
     track.avatar_url ||
-    '/default-avatar.png'
+    '/images/default-avatar.png'
+
+    console.log(track.profiles, "what is this?")
   const imageSrc = coverSrc || fallbackCover
 
   return (
@@ -656,7 +658,7 @@ const GlobalAudioPlayer = ({
             src={imageSrc}
             alt={track.title || 'Now playing'}
             className="w-48 h-48 md:w-64 md:h-64 rounded object-cover shadow-lg"
-            onError={(e) => { e.target.src = '/default-avatar.png' }}
+            onError={(e) => { e.target.src = '/images/default-avatar.png' }}
           />
           <div className="text-center space-y-1">
             <div className="text-xl font-bold truncate max-w-xl">{track.title || 'Untitled track'}</div>
@@ -746,7 +748,7 @@ const GlobalAudioPlayer = ({
             decoding="async"
             loading="lazy"
             onError={(e) => {
-              e.target.src = '/default-avatar.png'
+              e.target.src = '/images/default-avatar.png'
             }}
           />
           <div className="min-w-0 flex-1">
