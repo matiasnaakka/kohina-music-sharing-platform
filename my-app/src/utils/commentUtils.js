@@ -28,12 +28,30 @@ export async function postComment(trackId, body) {
       user_id: user.id,
       body: validation.text
     })
-    .select()
+    .select(`
+      id,
+      track_id,
+      user_id,
+      body,
+      created_at,
+      updated_at,
+      profiles!track_comments_user_id_fkey(id, username, avatar_url)
+    `)
     .single()
 
   if (error) {
     console.error('Post comment error:', error)
     throw error
+  }
+
+  // Fallback: ensure profile is present for immediate UI rendering
+  if (data && !data.profiles) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('id, username, avatar_url')
+      .eq('id', user.id)
+      .single()
+    if (profile) data.profiles = profile
   }
 
   return data
