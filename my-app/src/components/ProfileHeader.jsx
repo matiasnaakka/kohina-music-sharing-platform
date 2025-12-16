@@ -12,9 +12,16 @@ export default function ProfileHeader({
   followError,
 }) {
   const avatar = profile?.avatar_url || '/default-avatar.png'
+  const background = profile?.background_url
+  const headerStyle = background
+    ? { backgroundImage: `linear-gradient(180deg, rgba(0,0,0,0.6), rgba(0,0,0,0.85)), url(${background})` }
+    : {}
 
   return (
-    <div className="flex flex-col md:flex-row items-start gap-4 mb-6">
+    <div
+      className="flex flex-col md:flex-row items-start gap-4 mb-6 p-4 rounded-lg bg-gray-900/60 bg-cover bg-center min-h-[180px]"
+      style={headerStyle}
+    >
       <img
         src={avatar}
         alt={`${profile?.username || 'User'}'s avatar`}

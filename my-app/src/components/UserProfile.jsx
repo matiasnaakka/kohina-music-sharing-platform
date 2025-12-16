@@ -9,12 +9,14 @@ const UserProfile = ({ session, isModal = false, onClose, readOnly = false }) =>
     username: '',
     bio: '',
     location: '',
-    avatar_url: ''
+    avatar_url: '',
+    background_url: '',
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(null)
   const [avatarKey, setAvatarKey] = useState(Date.now())
+  const [backgroundKey, setBackgroundKey] = useState(Date.now())
   const [deleting, setDeleting] = useState(false)
   const [followingCount, setFollowingCount] = useState(0)
   const [followerCount, setFollowerCount] = useState(0)
@@ -28,7 +30,7 @@ const UserProfile = ({ session, isModal = false, onClose, readOnly = false }) =>
       try {
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
-          .select('username, bio, location, avatar_url')
+          .select('username, bio, location, avatar_url, background_url')
           .eq('id', session.user.id)
           .single()
         if (profileError) throw profileError
@@ -36,7 +38,8 @@ const UserProfile = ({ session, isModal = false, onClose, readOnly = false }) =>
           username: '',
           bio: '',
           location: '',
-          avatar_url: ''
+          avatar_url: '',
+          background_url: '',
         })
 
         const { count = 0, error: followingError } = await supabase
@@ -166,6 +169,87 @@ const UserProfile = ({ session, isModal = false, onClose, readOnly = false }) =>
     }
   }
 
+  const handleBackgroundChange = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setError(null)
+    setSuccess(null)
+    setLoading(true)
+
+    try {
+      const MAX_MB = 5
+      const compressOptions = {
+        maxSizeMB: 1,
+        maxWidthOrHeight: 1600,
+        useWebWorker: true,
+        initialQuality: 0.8,
+      }
+
+      let toUploadBlob = file
+      try {
+        const compressed = await imageCompression(file, compressOptions)
+        if (compressed && compressed.size > 0 && compressed.size < file.size) {
+          toUploadBlob = compressed
+        }
+      } catch (compErr) {
+        console.warn('Background compression failed, using original file', compErr)
+      }
+
+      const ext = (file.name && file.name.split('.').pop()) || 'png'
+      const timestamp = Date.now()
+      const uploadFile = new File(
+        [toUploadBlob],
+        `background-${timestamp}.${ext}`,
+        { type: toUploadBlob.type || file.type }
+      )
+
+      if (uploadFile.size > MAX_MB * 1024 * 1024) {
+        throw new Error(`Background image is too large. Please choose an image under ${MAX_MB}MB.`)
+      }
+
+      const path = `${session.user.id}/background-${timestamp}.${ext}`
+
+      const { error: uploadError } = await supabase.storage
+        .from('user-backgrounds')
+        .upload(path, uploadFile, { upsert: true, contentType: uploadFile.type })
+
+      if (uploadError) {
+        throw new Error(`Upload error: ${uploadError.message}`)
+      }
+
+      const { data: urlData } = supabase.storage
+        .from('user-backgrounds')
+        .getPublicUrl(path)
+
+      const bgUrl = `${urlData.publicUrl}?t=${timestamp}`
+
+      const updates = {
+        id: session.user.id,
+        username: profile.username || 'user_' + session.user.id.substring(0, 8),
+        background_url: urlData.publicUrl,
+        updated_at: new Date(),
+      }
+
+      const { error: dbError } = await supabase
+        .from('profiles')
+        .upsert(updates, { onConflict: ['id'] })
+
+      if (dbError) {
+        throw new Error(`Database error: ${dbError.message}`)
+      }
+
+      setBackgroundKey(timestamp)
+      setProfile(prev => ({ ...prev, background_url: bgUrl }))
+      setSuccess('Background updated successfully!')
+    } catch (err) {
+      console.error('Background update failed:', err)
+      setError(err.message || String(err))
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError(null)
@@ -251,6 +335,11 @@ const UserProfile = ({ session, isModal = false, onClose, readOnly = false }) =>
   if (readOnly) {
     return (
       <div className={containerClasses}>
+        {/* Background preview */}
+        <div
+          className="w-full h-40 mb-4 rounded-lg bg-cover bg-center bg-gray-800"
+          style={profile.background_url ? { backgroundImage: `url(${profile.background_url}?t=${backgroundKey})` } : {}}
+        />
         <h2 className="text-2xl font-bold mb-2">Profile</h2>
         <p className="text-sm text-gray-300 mb-4">
           Following {followingCount} • Followers {followerCount}
@@ -312,6 +401,23 @@ const UserProfile = ({ session, isModal = false, onClose, readOnly = false }) =>
         <PasswordResetRequest onClose={() => setShowPasswordReset(false)} />
       ) : (
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          {/* Background uploader */}
+          <div className="flex flex-col gap-2">
+            <div
+              className="w-full h-40 rounded-lg bg-cover bg-center bg-gray-800"
+              style={profile.background_url ? { backgroundImage: `url(${profile.background_url}?t=${backgroundKey})` } : {}}
+            />
+            <label className="text-sm text-gray-300">
+              Profile background
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleBackgroundChange}
+                className="text-white mt-1"
+              />
+            </label>
+          </div>
+
           <div className="flex flex-col items-center">
             <img
               key={avatarKey}

@@ -114,7 +114,7 @@ export default function Profile({ session, player }) {
       try {
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
-          .select('username, bio, location, avatar_url')
+          .select('username, bio, location, avatar_url, background_url')
           .eq('id', targetUserId)
           .single()
         if (profileError) throw profileError
@@ -285,7 +285,7 @@ export default function Profile({ session, player }) {
       try {
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
-          .select('username, bio, location, avatar_url')
+          .select('username, bio, location, avatar_url, background_url')
           .eq('id', session.user.id)
           .single()
         if (profileError) throw profileError
