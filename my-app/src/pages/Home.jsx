@@ -179,14 +179,14 @@ export default function Home({ session, player }) {
           const track = data?.[0]?.tracks
           const cover = track?.image_path
             ? getPublicStorageUrl('track-images', track.image_path)
-            : track?.profiles?.avatar_url || '/images/default-avatar.png'
+            : track?.profiles?.avatar_url || '/images/c-casette.png'
           return [pl.id, cover]
         }),
       )
 
       const map = new Map()
       results.forEach(([id, url]) => {
-        map.set(id, url || '/images/default-avatar.png')
+        map.set(id, url || '/images/c-casette.png')
       })
       setPlaylistCovers(map)
     } catch (err) {
@@ -278,7 +278,7 @@ export default function Home({ session, player }) {
                   >
                     <div className="flex items-center gap-3">
                       <img
-                        src={playlistCovers.get(playlist.id) || '/images/default-avatar.png'}
+                        src={playlistCovers.get(playlist.id) || '/images/c-casette.png'}
                         alt={`${playlist.title} cover`}
                         className="w-12 h-12 rounded object-cover border border-gray-700"
                         width="48"
@@ -286,7 +286,7 @@ export default function Home({ session, player }) {
                         decoding="async"
                         loading="lazy"
                         onError={(e) => {
-                          e.target.src = '/images/default-avatar.png'
+                          e.target.src = '/images/c-casette.png'
                         }}
                       />
                       <div className="min-w-0">
