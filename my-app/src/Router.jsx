@@ -2,7 +2,7 @@ import './index.css'
 import { useState, useEffect, useMemo } from 'react'
 import { Auth } from '@supabase/auth-ui-react'
 import { ThemeSupa } from '@supabase/auth-ui-shared'
-import { BrowserRouter, Routes, Route, Navigate, Link } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom'
 import { supabase } from './supabaseclient'
 import Home from './pages/Home'
 import ProtectedRoute from './components/protectedRoutes'
@@ -13,6 +13,18 @@ import PasswordResetForm from './components/PasswordResetForm'
 import Playlist from './pages/Playlist'
 import Privacy from './pages/Privacy'
 import Terms from './pages/Terms'
+
+// Scroll to top on route change for SPA navigation
+const ScrollToTop = () => {
+  const { pathname } = useLocation()
+
+  useEffect(() => {
+    // Use instant jump to avoid showing old scroll position on new route
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
+  }, [pathname])
+
+  return null
+}
 
 const customAppearance = {
   theme: {
@@ -72,6 +84,7 @@ const Routing = ({ player }) => {
 
   return (
     <BrowserRouter>
+      <ScrollToTop />
       <Routes>
         {/* Root route shows login when not authenticated, or redirects to /home */}
         <Route
