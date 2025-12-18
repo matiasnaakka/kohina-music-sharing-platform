@@ -216,7 +216,7 @@ export default function Home({ session, player }) {
     <div className="min-h-screen bg-black text-white">
       <NavBar session={session} onSignOut={handleSignOut} />
       <div className="max-w-5xl mx-auto mt-16 p-6 pb-32 md:pb-6">
-        <h1 className="text-3xl font-bold mb-6 text-white">Nice to see you, {displayName}!</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold mb-6 text-white">Nice to see you, {displayName}!</h1>
 
         <section className="mb-8">
           <h2 className="text-xl font-semibold mb-3 text-white">Your playlists</h2>
