@@ -4,12 +4,27 @@ import { supabase } from '../supabaseclient'
 
 const NavBar = ({ session, onSignOut }) => {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
-  const [avatarUrl, setAvatarUrl] = useState(null)
+  const [avatarUrl, setAvatarUrl] = useState(() => {
+    // Try to hydrate from sessionStorage so we don't flash the default avatar on route changes
+    try {
+      const userId = session?.user?.id
+      if (!userId) return null
+      const cached = sessionStorage.getItem(`navbar_avatar:${userId}`)
+      return cached || null
+    } catch {
+      return null
+    }
+  })
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   useEffect(() => {
     if (!session?.user?.id) {
       setAvatarUrl(null)
+      try {
+        sessionStorage.removeItem('navbar_avatar')
+      } catch {
+        // ignore
+      }
       return
     }
     let isMounted = true
@@ -21,7 +36,13 @@ const NavBar = ({ session, onSignOut }) => {
           .eq('id', session.user.id)
           .single()
         if (!error && isMounted) {
-          setAvatarUrl(data?.avatar_url || null)
+          const next = data?.avatar_url || null
+          setAvatarUrl(next)
+          try {
+            sessionStorage.setItem(`navbar_avatar:${session.user.id}`, next || '')
+          } catch {
+            // ignore storage failures
+          }
         }
       } catch (err) {
         if (isMounted) setAvatarUrl(null)
@@ -68,19 +89,25 @@ const NavBar = ({ session, onSignOut }) => {
               Upload
             </Link>
 
-            {/* Profile avatar */}
-            <img
-              src={avatarUrl || '/images/default-avatar.png'}
-              alt={session.user.email || 'User avatar'}
-              title={session.user.email}
-              className="w-8 h-8 rounded-full object-cover border border-gray-700"
-              width="32"
-              height="32"
-              decoding="async"
-              fetchpriority="high"
-              loading="eager"
-              onError={(e) => { e.target.src = '/images/default-avatar.png' }}
-            />
+            {/* Profile avatar (clickable to profile) */}
+            <Link
+              to="/profile"
+              className="inline-block"
+              aria-label="View your profile"
+            >
+              <img
+                src={avatarUrl || '/images/default-avatar.png'}
+                alt={session.user.email || 'User avatar'}
+                title={session.user.email}
+                className="w-8 h-8 rounded-full object-cover border border-gray-700"
+                width="32"
+                height="32"
+                decoding="async"
+                fetchpriority="high"
+                loading="eager"
+                onError={(e) => { e.target.src = '/images/default-avatar.png' }}
+              />
+            </Link>
 
             <button
               onClick={handleSignOutClick}
@@ -92,18 +119,23 @@ const NavBar = ({ session, onSignOut }) => {
 
           {/* Mobile Menu Button */}
           <div className="sm:hidden flex items-center gap-3">
-            <img
-              src={avatarUrl || '/images/default-avatar.png'}
-              alt={session.user.email || 'User avatar'}
-              title={session.user.email}
-              className="w-7 h-7 rounded-full object-cover border border-gray-700"
-              width="28"
-              height="28"
-              decoding="async"
-              fetchpriority="high"
-              loading="eager"
-              onError={(e) => { e.target.src = '/images/default-avatar.png' }}
-            />
+            <Link
+              to="/profile"
+              aria-label="View your profile"
+            >
+              <img
+                src={avatarUrl || '/images/default-avatar.png'}
+                alt={session.user.email || 'User avatar'}
+                title={session.user.email}
+                className="w-7 h-7 rounded-full object-cover border border-gray-700"
+                width="28"
+                height="28"
+                decoding="async"
+                fetchpriority="high"
+                loading="eager"
+                onError={(e) => { e.target.src = '/images/default-avatar.png' }}
+              />
+            </Link>
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="text-white text-2xl hover:text-gray-300"
