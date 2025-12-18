@@ -642,8 +642,6 @@ const GlobalAudioPlayer = ({
     track.profiles?.avatar_url ||
     track.avatar_url ||
     '/images/default-avatar.png'
-
-    console.log(track.profiles, "what is this?")
   const imageSrc = coverSrc || fallbackCover
 
   return (

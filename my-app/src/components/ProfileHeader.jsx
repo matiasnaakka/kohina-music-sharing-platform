@@ -11,7 +11,7 @@ export default function ProfileHeader({
   isFollowing,
   followError,
 }) {
-  const avatar = profile?.avatar_url || '/default-avatar.png'
+  const avatar = profile?.avatar_url || '/images/default-avatar.png'
   const background = profile?.background_url
   const headerStyle = background
     ? { backgroundImage: `linear-gradient(180deg, rgba(0,0,0,0.6), rgba(0,0,0,0.85)), url(${background})` }
@@ -31,7 +31,7 @@ export default function ProfileHeader({
         decoding="async"
         loading="lazy"
         onError={(e) => {
-          e.target.src = '/default-avatar.png'
+          e.target.src = '/images/default-avatar.png'
         }}
       />
       <div className="flex-1">
