@@ -12,6 +12,7 @@ export default function SidebarLikedTracks({
   session,
   isTrackLiked,
   onToggleLike,
+  likeCounts,
   title = 'Liked Tracks',
 }) {
   if (loading) return <aside className="bg-gray-900 bg-opacity-80 p-4 rounded"><div className="text-gray-400 text-sm">Loading...</div></aside>
@@ -29,9 +30,10 @@ export default function SidebarLikedTracks({
       <h4 className="text-xl font-semibold mb-3">{title}</h4>
       <div className="max-h-96 overflow-y-auto space-y-2">
         {tracks.map((track) => {
+          const avatarSrc = track.profiles?.avatar_url || '/images/default-avatar.png'
           const coverSrc =
             getPublicStorageUrl('track-images', track.image_path) ||
-            track.profiles?.avatar_url ||
+            avatarSrc ||
             '/images/default-avatar.png'
           const isActive = player?.currentTrack?.id === track.id
           const isBusy = isActive && player?.loading
@@ -46,6 +48,9 @@ export default function SidebarLikedTracks({
             }
           }
           const trackIsLiked = isTrackLiked(track.id)
+          const totalLikes = likeCounts
+            ? (likeCounts instanceof Map ? likeCounts.get(track.id) : likeCounts[track.id]) || 0
+            : 0
 
           return (
             <div key={track.id} className="bg-gray-800 bg-opacity-60 p-2 rounded hover:bg-opacity-80 transition text-xs">
@@ -59,11 +64,23 @@ export default function SidebarLikedTracks({
                   decoding="async"
                   loading="lazy"
                   onError={(e) => {
-                    e.target.src = track.profiles?.avatar_url || '/images/default-avatar.png'
+                    e.target.src = avatarSrc
                   }}
                 />
                 <div className="min-w-0 flex-1">
-                  <h5 className="font-semibold truncate">{track.title}</h5>
+                  <div className="flex items-center gap-2">
+                    <img
+                      src={avatarSrc}
+                      alt="Profile avatar"
+                      className="w-6 h-6 rounded-full object-cover border border-gray-600"
+                      width="24"
+                      height="24"
+                      decoding="async"
+                      loading="lazy"
+                      onError={(e) => { e.target.src = '/images/default-avatar.png' }}
+                    />
+                    <h5 className="font-semibold truncate">{track.title}</h5>
+                  </div>
                   <p className="text-gray-400 truncate">{track.artist}</p>
                   <Link
                     to={`/profile?user=${track.user_id}`}
@@ -71,7 +88,9 @@ export default function SidebarLikedTracks({
                   >
                     {track.profiles?.username || 'Anonymous'}
                   </Link>
-                  <p className="text-gray-500 text-xs mt-1">🎵 {track.play_count || 0} plays</p>
+                  <p className="text-gray-500 text-xs mt-1">
+                    🎵 {track.play_count || 0} plays{likeCounts ? ` • ❤️ ${totalLikes} likes` : ''}
+                  </p>
                 </div>
               </div>
               <div className="flex items-center gap-1 flex-wrap">

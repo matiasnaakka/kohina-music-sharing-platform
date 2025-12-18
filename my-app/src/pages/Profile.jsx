@@ -54,6 +54,10 @@ export default function Profile({ session, player }) {
   const [ownPlaylistsLoading, setOwnPlaylistsLoading] = useState(false)
   const [ownPlaylistsError, setOwnPlaylistsError] = useState(null)
 
+  // Like count maps (trackId -> like count)
+  const [ownLikeCounts, setOwnLikeCounts] = useState(new Map())
+  const [publicLikeCounts, setPublicLikeCounts] = useState(new Map())
+
   const [showSettings, setShowSettings] = useState(false)
   const [followModal, setFollowModal] = useState({ open: false, type: null, userId: null })
   const [followModalUsers, setFollowModalUsers] = useState([])
@@ -64,6 +68,7 @@ export default function Profile({ session, player }) {
   const [likedTracks, setLikedTracks] = useState([])
   const [likedTracksLoading, setLikedTracksLoading] = useState(false)
   const [likedTracksError, setLikedTracksError] = useState(null)
+  const [likedTracksLikeCounts, setLikedTracksLikeCounts] = useState(new Map())
 
   // NEW: Comments expansion state
   const [expandedComments, setExpandedComments] = useState(null)
@@ -122,8 +127,9 @@ export default function Profile({ session, player }) {
         const { data: tracksData, error: tracksError } = await supabase
           .from('tracks')
           .select(`
-            id, title, artist, album, audio_path, created_at, image_path, play_count,
-            genres(name)
+            id, user_id, title, artist, album, audio_path, created_at, image_path, play_count,
+            genres(name),
+            profiles!tracks_user_id_fkey(username, avatar_url)
           `)
           .eq('user_id', targetUserId)
           .eq('is_public', true)
@@ -174,7 +180,8 @@ export default function Profile({ session, player }) {
 
         if (isMounted) {
           setPublicProfile(profileData)
-          setPublicTracks(tracksData || [])
+          const safeTracks = tracksData || []
+          setPublicTracks(safeTracks)
           setPublicPlaylists(playlistsData || [])
           setPublicPlaylistsError(null)
           setFollowerCount(followerCountResult)
@@ -227,14 +234,18 @@ export default function Profile({ session, player }) {
         const { data, error } = await supabase
           .from('tracks')
           .select(`
-            id, title, artist, album, audio_path, created_at, is_public, image_path, play_count,
-            genres(name)
+            id, user_id, title, artist, album, audio_path, created_at, is_public, image_path, play_count,
+            genres(name),
+            profiles!tracks_user_id_fkey(username, avatar_url)
           `)
           .eq('user_id', session.user.id)
           .is('deleted_at', null)
           .order('created_at', { ascending: false })
         if (error) throw error
-        if (isMounted) setOwnTracks(data || [])
+        if (isMounted) {
+          const safeTracks = data || []
+          setOwnTracks(safeTracks)
+        }
       } catch (err) {
         if (isMounted) {
           setOwnTracksError(err.message)
@@ -317,6 +328,76 @@ export default function Profile({ session, player }) {
     fetchOwnHeader()
     return () => { isMounted = false }
   }, [isOwnProfile, session?.user?.id])
+
+  // Compute like counts for ownTracks
+  useEffect(() => {
+    const ids = ownTracks.map(t => t.id).filter(Boolean)
+    if (!ids.length) {
+      setOwnLikeCounts(new Map())
+      return
+    }
+
+    let isMounted = true
+    const fetchOwnLikeCounts = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('track_likes')
+          .select('track_id')
+          .in('track_id', ids)
+
+        if (error) throw error
+
+        const counts = new Map()
+        for (const row of data || []) {
+          const tid = row.track_id
+          counts.set(tid, (counts.get(tid) || 0) + 1)
+        }
+        if (isMounted) setOwnLikeCounts(counts)
+      } catch {
+        if (isMounted) setOwnLikeCounts(new Map())
+      }
+    }
+
+    fetchOwnLikeCounts()
+    return () => {
+      isMounted = false
+    }
+  }, [ownTracks])
+
+  // Compute like counts for publicTracks
+  useEffect(() => {
+    const ids = publicTracks.map(t => t.id).filter(Boolean)
+    if (!ids.length) {
+      setPublicLikeCounts(new Map())
+      return
+    }
+
+    let isMounted = true
+    const fetchPublicLikeCounts = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('track_likes')
+          .select('track_id')
+          .in('track_id', ids)
+
+        if (error) throw error
+
+        const counts = new Map()
+        for (const row of data || []) {
+          const tid = row.track_id
+          counts.set(tid, (counts.get(tid) || 0) + 1)
+        }
+        if (isMounted) setPublicLikeCounts(counts)
+      } catch {
+        if (isMounted) setPublicLikeCounts(new Map())
+      }
+    }
+
+    fetchPublicLikeCounts()
+    return () => {
+      isMounted = false
+    }
+  }, [publicTracks])
 
   const handleFollowToggle = async () => {
     if (!session?.user?.id || !targetUserId) return
@@ -454,6 +535,7 @@ export default function Profile({ session, player }) {
         if (isMounted) {
           setLikedTracksError(err.message)
           setLikedTracks([])
+          setLikedTracksLikeCounts(new Map())
         }
       } finally {
         if (isMounted) setLikedTracksLoading(false)
@@ -463,6 +545,39 @@ export default function Profile({ session, player }) {
     fetchLikedTracks()
     return () => { isMounted = false }
   }, [isOwnProfile, session?.user?.id, fetchLikedTracksTracks])
+
+  // Compute like counts for liked tracks
+  useEffect(() => {
+    const ids = likedTracks.map((t) => t.id).filter(Boolean)
+    if (!ids.length) {
+      setLikedTracksLikeCounts(new Map())
+      return
+    }
+
+    let active = true
+    const loadCounts = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('track_likes')
+          .select('track_id')
+          .in('track_id', ids)
+
+        if (error) throw error
+
+        const counts = new Map()
+        for (const row of data || []) {
+          const tid = row.track_id
+          counts.set(tid, (counts.get(tid) || 0) + 1)
+        }
+        if (active) setLikedTracksLikeCounts(counts)
+      } catch (err) {
+        if (active) setLikedTracksLikeCounts(new Map())
+      }
+    }
+
+    loadCounts()
+    return () => { active = false }
+  }, [likedTracks])
 
   // Fetch liked tracks when own tracks load
   useEffect(() => {
@@ -529,6 +644,7 @@ export default function Profile({ session, player }) {
                       onToggleComments={(id) => setExpandedComments(id === expandedComments ? null : id)}
                       isTrackLiked={isOwnTrackLiked}
                       onToggleLike={toggleOwnTrackLike}
+                      likeCounts={ownLikeCounts}
                       emptyMessage="You haven't uploaded any tracks yet."
                     />
                   </div>
@@ -547,6 +663,7 @@ export default function Profile({ session, player }) {
                       session={session}
                       isTrackLiked={isLikedTrackLiked}
                       onToggleLike={toggleLikedTrackLike}
+                      likeCounts={likedTracksLikeCounts}
                     />
                   </div>
                 </div>
@@ -608,6 +725,7 @@ export default function Profile({ session, player }) {
                     onToggleComments={(id) => setExpandedComments(id === expandedComments ? null : id)}
                     isTrackLiked={isPublicTrackLiked}
                     onToggleLike={togglePublicTrackLike}
+                      likeCounts={publicLikeCounts}
                     emptyMessage="No public tracks yet."
                   />
                 </div>
