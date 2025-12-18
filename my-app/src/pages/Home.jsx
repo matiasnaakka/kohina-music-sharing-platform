@@ -394,11 +394,11 @@ export default function Home({ session, player }) {
               }
               return (
                 <div key={track.id}>
-                  <div className="bg-gray-800 bg-opacity-80 p-4 rounded shadow-lg text-white flex gap-4">
+                  <div className="bg-gray-800 bg-opacity-80 p-3 sm:p-4 rounded shadow-lg text-white flex flex-col sm:flex-row gap-3 sm:gap-4">
                     <img
                       src={coverSrc}
                       alt={`${track.title} cover`}
-                      className="w-24 h-24 object-cover rounded"
+                      className="w-20 h-20 sm:w-24 sm:h-24 object-cover rounded"
                       width="96"
                       height="96"
                       decoding="async"
@@ -407,8 +407,8 @@ export default function Home({ session, player }) {
                       loading={idx === 0 ? 'eager' : 'lazy'}
                       onError={(e) => { e.target.src = track.profiles?.avatar_url || '/images/default-avatar.png' }}
                     />
-                    <div className="flex flex-col md:flex-row justify-between flex-1">
-                      <div className="mb-3 md:mb-0">
+                    <div className="flex flex-col md:flex-row justify-between flex-1 gap-3">
+                      <div className="mb-2 md:mb-0">
                         <div className="flex items-center gap-3 mb-1">
                           {track.profiles?.avatar_url && (
                             <Link
@@ -454,7 +454,7 @@ export default function Home({ session, player }) {
                         </div>
                       </div>
                       
-                      <div className="shrink-0 min-w-[200px] flex items-center gap-2 flex-wrap">
+                      <div className="w-full md:w-auto flex items-center gap-2 flex-wrap md:justify-end mt-2 md:mt-0">
                         {canPlay ? (
                           <>
                             <button
