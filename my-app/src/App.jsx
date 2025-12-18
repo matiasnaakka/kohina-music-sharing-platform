@@ -489,6 +489,7 @@ const GlobalAudioPlayer = ({
   const sourceRef = useRef(null)
   const dataArrayRef = useRef(null)
   const animationRef = useRef(null)
+  const lastPrevClickRef = useRef(0)
   const [progress, setProgress] = useState(0) // 0..1
   const [duration, setDuration] = useState(0)
   const [isFullscreen, setIsFullscreen] = useState(false)
@@ -628,6 +629,28 @@ const GlobalAudioPlayer = ({
     if (audio) audio.volume = next
   }
 
+  // Previous button behavior:
+  // - First click: restart the currently playing track.
+  // - Second click within 1 second of the first: go to the previous track in the queue.
+  const handlePrevClick = () => {
+    const now = Date.now()
+    const lastClick = lastPrevClickRef.current
+    const audio = audioRef.current
+
+    if (lastClick && now - lastClick < 1000) {
+      // Second (or subsequent) click within 1s: move to previous track
+      lastPrevClickRef.current = 0
+      onPrev?.()
+      return
+    }
+
+    // First click: restart current track
+    lastPrevClickRef.current = now
+    if (audio) {
+      audio.currentTime = 0
+    }
+  }
+
   // Helper to stop propagation on control clicks
   const withStop = (fn) => (e) => {
     e.stopPropagation()
@@ -683,7 +706,7 @@ const GlobalAudioPlayer = ({
           <div className="flex items-center gap-3">
             <button
               type="button"
-              onClick={withStop(onPrev)}
+              onClick={withStop(handlePrevClick)}
               className="px-3 py-2 rounded bg-gray-800 text-white hover:bg-gray-700 disabled:opacity-60 flex items-center gap-2"
               disabled={!canNavigate || loading}
               aria-label="Previous track"
@@ -785,7 +808,7 @@ const GlobalAudioPlayer = ({
           <div className="flex items-center gap-3 ml-auto">
             <button
               type="button"
-              onClick={withStop(onPrev)}
+              onClick={withStop(handlePrevClick)}
               className="px-2 py-1 text-sm text-gray-200 hover:bg-gray-800"
               disabled={!canNavigate || loading}
               aria-label="Previous track"
