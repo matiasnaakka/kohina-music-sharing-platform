@@ -19,6 +19,7 @@ export default function Home({ session, player }) {
   const [ownPlaylists, setOwnPlaylists] = useState([])
   const [ownPlaylistsLoading, setOwnPlaylistsLoading] = useState(false)
   const [ownPlaylistsError, setOwnPlaylistsError] = useState(null)
+  const [playlistCovers, setPlaylistCovers] = useState(new Map())
   const { isLiked, toggleLike, loading: likesLoading, fetchLikedTracks } = useLikesV2(session?.user?.id)
   const [expandedComments, setExpandedComments] = useState(null)
 
@@ -146,11 +147,51 @@ export default function Home({ session, player }) {
 
       if (error) throw error
       setOwnPlaylists(data || [])
+      await fetchPlaylistCovers(data || [])
     } catch (err) {
       setOwnPlaylists([])
       setOwnPlaylistsError(err.message)
+      setPlaylistCovers(new Map())
     } finally {
       setOwnPlaylistsLoading(false)
+    }
+  }
+
+  const fetchPlaylistCovers = async (playlists) => {
+    if (!playlists || playlists.length === 0) {
+      setPlaylistCovers(new Map())
+      return
+    }
+
+    try {
+      const results = await Promise.all(
+        playlists.map(async (pl) => {
+          const { data, error } = await supabase
+            .from('playlist_tracks')
+            .select(
+              `tracks:tracks(image_path, profiles!tracks_user_id_fkey(avatar_url))`
+            )
+            .eq('playlist_id', pl.id)
+            .order('created_at', { ascending: true })
+            .limit(1)
+
+          if (error) throw error
+          const track = data?.[0]?.tracks
+          const cover = track?.image_path
+            ? getPublicStorageUrl('track-images', track.image_path)
+            : track?.profiles?.avatar_url || '/images/default-avatar.png'
+          return [pl.id, cover]
+        }),
+      )
+
+      const map = new Map()
+      results.forEach(([id, url]) => {
+        map.set(id, url || '/images/default-avatar.png')
+      })
+      setPlaylistCovers(map)
+    } catch (err) {
+      console.warn('Failed to fetch playlist covers', err)
+      setPlaylistCovers(new Map())
     }
   }
 
@@ -228,21 +269,31 @@ export default function Home({ session, player }) {
           ) : ownPlaylists.length === 0 ? (
             <div className="text-sm text-gray-400 bg-gray-800 px-3 py-2 rounded">Create a playlist to see it here.</div>
           ) : (
-            <ul className="grid gap-2 sm:grid-cols-2">
+            <ul className="grid gap-3 grid-cols-2 md:grid-cols-4">
               {ownPlaylists.map((playlist) => (
                 <li key={playlist.id}>
                   <Link
                     to={`/playlist?id=${playlist.id}`}
-                    className="block bg-gray-800 hover:bg-gray-700 px-3 py-2 rounded transition"
+                    className="block bg-gray-800 hover:bg-gray-700 px-3 py-2 rounded transition min-h-[64px]"
                   >
-                    <p className="text-white font-semibold truncate">{playlist.title}</p>
-                    {playlist.description && (
-                      <p className="text-xs text-gray-400 line-clamp-2 mt-1">{playlist.description}</p>
-                    )}
-                    <p className="text-xs text-gray-500 mt-2">
-                      {playlist.is_public ? 'Public' : 'Private'} • Updated{' '}
-                      {new Date(playlist.updated_at).toLocaleDateString()}
-                    </p>
+                    <div className="flex items-center gap-3">
+                      <img
+                        src={playlistCovers.get(playlist.id) || '/images/default-avatar.png'}
+                        alt={`${playlist.title} cover`}
+                        className="w-12 h-12 rounded object-cover border border-gray-700"
+                        width="48"
+                        height="48"
+                        decoding="async"
+                        loading="lazy"
+                        onError={(e) => {
+                          e.target.src = '/images/default-avatar.png'
+                        }}
+                      />
+                      <div className="min-w-0">
+                        <p className="text-white font-semibold truncate">{playlist.title}</p>
+                        <p className="text-xs text-gray-500 mt-1">{playlist.is_public ? 'Public' : 'Private'}</p>
+                      </div>
+                    </div>
                   </Link>
                 </li>
               ))}
