@@ -219,7 +219,7 @@ export default function Home({ session, player }) {
         <h1 className="text-2xl sm:text-3xl font-bold mb-6 text-white">Nice to see you, {displayName}!</h1>
 
         <section className="mb-8">
-          <h2 className="text-xl font-semibold mb-3 text-white">Your playlists</h2>
+          <h2 className="sm:text-xl text-lg font-semibold mb-3 text-white">Your playlists</h2>
           {ownPlaylistsLoading ? (
             <div className="text-sm text-gray-400 bg-gray-800 px-3 py-2 rounded">Loading playlists...</div>
           ) : ownPlaylistsError ? (
