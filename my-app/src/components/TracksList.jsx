@@ -18,6 +18,7 @@ export default function TracksList({
   isTrackLiked,
   onToggleLike,
   emptyMessage,
+  likeCounts, // optional: Map or object of trackId -> likes
 }) {
   if (loading) return <div>Loading tracks...</div>
   if (error) return <div className="bg-red-500 bg-opacity-25 text-red-100 p-3 rounded">{error}</div>
@@ -42,6 +43,10 @@ export default function TracksList({
           }
         }
         const trackIsLiked = isTrackLiked(track.id)
+        const totalLikes =
+          likeCounts && track.id != null
+            ? (likeCounts instanceof Map ? likeCounts.get(track.id) : likeCounts[track.id]) || 0
+            : 0
 
         return (
           <div key={track.id}>
@@ -120,13 +125,23 @@ export default function TracksList({
                       </span>
                     )}
                     <span className="text-gray-400">{formatDate(track.created_at)}</span>
-                    <span className="text-gray-500">• 🎵 {track.play_count || 0} plays</span>
+                    <span className="text-gray-500">
+                      • 🎵 {track.play_count || 0} plays
+                      {likeCounts && (
+                        <> • ❤️ {totalLikes} likes</>
+                      )}
+                    </span>
                   </div>
 
                   {/* Desktop-only: date + plays under artist/album, pills stay on the top-right */}
                   <div className="hidden md:flex flex-wrap items-center gap-2 text-xs">
                     <span className="text-gray-400">{formatDate(track.created_at)}</span>
-                    <span className="text-gray-500">• 🎵 {track.play_count || 0} plays</span>
+                    <span className="text-gray-500">
+                      • 🎵 {track.play_count || 0} plays
+                      {likeCounts && (
+                        <> • ❤️ {totalLikes} likes</>
+                      )}
+                    </span>
                   </div>
                 </div>
               </div>

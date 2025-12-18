@@ -2,6 +2,7 @@ import { useState, useEffect, lazy, Suspense, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase, getPublicStorageUrl } from '../supabaseclient'
 import NavBar from '../components/NavBar'
+import TracksList from '../components/TracksList'
 const AddToPlaylist = lazy(() => import('../components/AddToPlaylist'))
 const TrackComments = lazy(() => import('../components/TrackComments'))
 import { useLikesV2 } from '../hooks/useLikesV2'
@@ -360,164 +361,28 @@ export default function Home({ session, player }) {
         ) : displayedTracks.length === 0 ? (
           <div className="text-white bg-gray-800 p-6 rounded">
             {selectedGenreIds.length > 0
-              ? "No tracks found for the selected genres. Try selecting different genres."
-              : "No tracks available yet."}
+              ? 'No tracks found for the selected genres. Try selecting different genres.'
+              : 'No tracks available yet.'}
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-4">
-            {displayedTracks.map((track, idx) => {
-              const coverSrc =
-                getPublicStorageUrl('track-images', track.image_path) ||
-                track.profiles?.avatar_url ||
-                '/images/default-avatar.png'
-              const isActive = player?.currentTrack?.id === track.id
-              const isBusy = isActive && player?.loading
-              const canPlay = Boolean(track.audio_path)
-              const playbackLabel = isActive
-                ? isBusy
-                  ? 'Loading...'
-                  : player?.isPlaying
-                    ? 'Pause'
-                    : 'Resume'
-                : 'Play'
-              const handlePlayback = () => {
-                if (!player || !canPlay) return
-                if (isActive) {
-                  player.isPlaying ? player.pause() : player.resume()
-                } else {
-                  player.playTrack(track, displayedTracks)
-                }
-              }
-              const trackIsLiked = isLiked(track.id)
-              const handleLikeClick = async () => {
-                await toggleLike(track.id)
-              }
-              return (
-                <div key={track.id}>
-                  <div className="bg-gray-800 bg-opacity-80 p-3 sm:p-4 rounded shadow-lg text-white flex flex-col sm:flex-row gap-3 sm:gap-4">
-                    <img
-                      src={coverSrc}
-                      alt={`${track.title} cover`}
-                      className="w-20 h-20 sm:w-24 sm:h-24 object-cover rounded"
-                      width="96"
-                      height="96"
-                      decoding="async"
-                      // Prioritize first cover for LCP
-                      fetchpriority={idx === 0 ? 'high' : undefined}
-                      loading={idx === 0 ? 'eager' : 'lazy'}
-                      onError={(e) => { e.target.src = track.profiles?.avatar_url || '/images/default-avatar.png' }}
-                    />
-                    <div className="flex flex-col md:flex-row justify-between flex-1 gap-3">
-                      <div className="mb-2 md:mb-0">
-                        <div className="flex items-center gap-3 mb-1">
-                          {track.profiles?.avatar_url && (
-                            <Link
-                              to={`/profile?user=${encodeURIComponent(track.user_id)}`}
-                              className="inline-block"
-                              aria-label={`View ${track.profiles?.username || 'user'}'s profile`}
-                            >
-                              <img 
-                                src={track.profiles.avatar_url} 
-                                alt="User avatar"
-                                className="w-8 h-8 rounded-full object-cover"
-                                width="32"
-                                height="32"
-                                decoding="async"
-                                loading="lazy"
-                                onError={(e) => { e.target.src = '/images/default-avatar.png' }}
-                              />
-                            </Link>
-                          )}
-                          <h3 className="font-bold text-lg">{track.title}</h3>
-                        </div>
-                        <p className="text-gray-300">
-                          {track.artist} {track.album ? `• ${track.album}` : ''}
-                        </p>
-                        <div className="flex gap-2 items-center mt-1">
-                          <span className="bg-gray-700 px-2 py-0.5 text-xs rounded">
-                            {track.genres ? track.genres.name : 'No genre'}
-                          </span>
-                          <span className="text-xs text-gray-400">
-                            Shared by{' '}
-                            <Link
-                              to={`/profile?user=${encodeURIComponent(track.user_id)}`}
-                              className="underline hover:text-teal-300"
-                            >
-                              {track.profiles?.username || 'Anonymous'}
-                            </Link>
-                            {' '}• {formatDate(track.created_at)}
-                          </span>
-                          <span className="text-xs text-gray-500">
-                            • 🎵 {track.play_count || 0} plays
-                            {' '}• ❤️ {likeCounts.get(track.id) || 0} likes
-                          </span>
-                        </div>
-                      </div>
-                      
-                      <div className="w-full md:w-auto flex items-center gap-2 flex-wrap md:justify-end mt-2 md:mt-0">
-                        {canPlay ? (
-                          <>
-                            <button
-                              type="button"
-                              onClick={handlePlayback}
-                              disabled={isBusy}
-                              className="bg-teal-500 text-black px-3 py-1 rounded text-sm font-semibold hover:bg-teal-400 disabled:opacity-60"
-                            >
-                              {playbackLabel}
-                            </button>
-                            {isActive && player?.error && !player.loading && (
-                              <span className="max-w-[140px] truncate text-xs text-red-400">
-                                {player.error}
-                              </span>
-                            )}
-                          </>
-                        ) : (
-                          <span className="text-red-400">Audio unavailable</span>
-                        )}
-                        <button
-                          type="button"
-                          onClick={handleLikeClick}
-                          disabled={likesLoading}
-                          className={`px-2 py-1 rounded text-sm font-semibold transition ${
-                            trackIsLiked
-                              ? 'bg-red-500 text-white hover:bg-red-400'
-                              : 'bg-gray-700 text-white hover:bg-gray-600'
-                          } disabled:opacity-60`}
-                        >
-                          {trackIsLiked ? '❤️ Liked' : '🤍 Like'}
-                        </button>
-                        <Suspense fallback={null}>
-                          <AddToPlaylist
-                            session={session}
-                            track={track}
-                            buttonClassName="bg-gray-700 text-white px-2 py-1 rounded text-sm hover:bg-gray-600"
-                          />
-                        </Suspense>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Comments section */}
-                  {expandedComments === track.id && (
-                    <div className="bg-gray-900 p-4 rounded-b mt-0 border-t border-gray-700">
-                      <Suspense fallback={<div className="text-gray-400 text-sm">Loading comments…</div>}>
-                        <TrackComments trackId={track.id} session={session} />
-                      </Suspense>
-                    </div>
-                  )}
-
-                  {/* Comments toggle button */}
-                  <button
-                    type="button"
-                    onClick={() => setExpandedComments(expandedComments === track.id ? null : track.id)}
-                    className="text-xs text-blue-400 hover:underline mt-2 block"
-                  >
-                    {expandedComments === track.id ? 'Hide comments' : 'View comments'}
-                  </button>
-                </div>
-              )
-            })}
-          </div>
+          <TracksList
+            tracks={displayedTracks}
+            loading={false}
+            error={null}
+            profileAvatar={null}
+            player={player}
+            session={session}
+            isOwn={false}
+            formatDate={formatDate}
+            expandedComments={expandedComments}
+            onToggleComments={(id) => setExpandedComments(expandedComments === id ? null : id)}
+            isTrackLiked={isLiked}
+            onToggleLike={toggleLike}
+            likeCounts={likeCounts}
+            emptyMessage={selectedGenreIds.length > 0
+              ? 'No tracks found for the selected genres. Try selecting different genres.'
+              : 'No tracks available yet.'}
+          />
         )}
       </div>
     </div>
