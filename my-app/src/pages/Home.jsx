@@ -411,16 +411,22 @@ export default function Home({ session, player }) {
                       <div className="mb-3 md:mb-0">
                         <div className="flex items-center gap-3 mb-1">
                           {track.profiles?.avatar_url && (
-                            <img 
-                              src={track.profiles.avatar_url} 
-                              alt="User avatar"
-                              className="w-8 h-8 rounded-full object-cover"
-                              width="32"
-                              height="32"
-                              decoding="async"
-                              loading="lazy"
-                              onError={(e) => e.target.src = '/images/default-avatar.png'}
-                            />
+                            <Link
+                              to={`/profile?user=${encodeURIComponent(track.user_id)}`}
+                              className="inline-block"
+                              aria-label={`View ${track.profiles?.username || 'user'}'s profile`}
+                            >
+                              <img 
+                                src={track.profiles.avatar_url} 
+                                alt="User avatar"
+                                className="w-8 h-8 rounded-full object-cover"
+                                width="32"
+                                height="32"
+                                decoding="async"
+                                loading="lazy"
+                                onError={(e) => { e.target.src = '/images/default-avatar.png' }}
+                              />
+                            </Link>
                           )}
                           <h3 className="font-bold text-lg">{track.title}</h3>
                         </div>
