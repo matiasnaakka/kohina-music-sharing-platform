@@ -99,7 +99,7 @@ const Routing = ({ player }) => {
                   <Auth
                     supabaseClient={supabase}
                     appearance={customAppearance}
-                    providers={['google']}
+                    providers={[]}
                     // Ensures external auth flows return into the SPA route on Cloudflare Pages
                     redirectTo={redirectToHome}
                   />
