@@ -79,7 +79,7 @@ const Routing = ({ player }) => {
     if (!loading && !session) {
       player?.stop?.()
     }
-  }, [loading, session, player])
+  }, [loading, session])
 
   return (
     <BrowserRouter>

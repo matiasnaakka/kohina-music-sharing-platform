@@ -16,8 +16,8 @@ const LoginLayout = ({ children }) => (
     <h1 className="absolute top-4 left-4 z-20 text-white font-['Lalezar'] text-3xl">
       Kohina
     </h1>
-    {/* Dark overlay */}
-    <div className="absolute inset-0 bg-black opacity-75" />
+    {/* Dark overlay (let clicks pass through) */}
+    <div className="absolute inset-0 bg-black opacity-75 pointer-events-none" />
     {/* Main content */}
     <div className="max-w-md w-full space-y-8 relative z-10">
       {children}
