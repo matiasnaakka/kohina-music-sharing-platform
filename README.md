@@ -1,159 +1,106 @@
-# Kohina — Compact Developer Documentation
+ # Kohina — Developer Guide
 
-Short description
-- Kohina is a React + Supabase audio sharing app. Users upload audio, add covers, create playlists, follow creators and play tracks with a global audio player.
+ React + Supabase music sharing app. Users upload audio, add covers, create playlists, follow creators, and play tracks through a global audio player with queue controls.
 
-Table of contents
-- Overview
-- Quick start
-- Required environment variables
-- Supabase: database tables & recommended columns
-- Storage buckets & access rules
-- Project structure & responsibilities
-- Common scripts
-- Deployment notes
-- Troubleshooting
-- Security & best practices
-- Contributing & contact
+ ## Contents
+ - What it does
+ - Architecture map
+ - Stack and requirements
+ - Setup (dev)
+ - Environment variables
+ - Supabase schema and storage
+ - Key flows (auth, playback, likes, comments, playlists)
+ - Scripts
+ - Deployment notes
+ - Troubleshooting
+ - Security and data protection
+ - Contributing and contact
 
-Overview
-- Client-side SPA built with React, Tailwind CSS and Supabase (Auth, Postgres, Storage).
-- Audio files are kept in a private storage bucket and served via signed URLs.
-- Avatars and track images are public (with cache-busting when updated).
+ ## What it does
+ - Auth (Supabase email + Google), protected routes, password reset.
+ - Upload audio, compress/validate client-side, attach cover images, and store privately via signed URLs.
+ - Global audio player with play/pause/seek/next/previous, queue navigation, fullscreen view, and visualizer.
+ - Social actions: like/unlike with optimistic updates, comments with rate limiting, follow creators, playlists and “add to playlist.”
+ - Profile pages with avatar, bio, settings, and GDPR export panel.
 
-Quick start (development)
-1. Clone the repo:
-   - git clone <your-repo-url>
-2. Install:
-   - npm install
-3. Create a Vite .env file in project root (see "Required environment variables")
-4. Start dev server:
-   - npm run dev
-5. Visit http://localhost:5173 (port depends on Vite)
+ ## Architecture map
+ - Routing and auth: [my-app/src/Router.jsx](my-app/src/Router.jsx) manages Supabase session, protected routes, login layout, privacy/terms pages.
+ - Player and app shell: [my-app/src/App.jsx](my-app/src/App.jsx) wires the global audio player, signed URL fetching, queue handling, and renders `GlobalAudioPlayer`.
+ - Supabase client: [my-app/src/supabaseclient.js](my-app/src/supabaseclient.js) creates the client and public URL helper for storage.
+ - Feature hooks: likes [my-app/src/hooks/useLikesV2.js](my-app/src/hooks/useLikesV2.js), play-count tracking [my-app/src/hooks/useIncrementPlayCount.js](my-app/src/hooks/useIncrementPlayCount.js), comments [my-app/src/hooks/useComments.js](my-app/src/hooks/useComments.js).
+ - Utilities: security and validation [my-app/src/utils/securityUtils.js](my-app/src/utils/securityUtils.js); play-count edge call [my-app/src/utils/incrementPlayCount.js](my-app/src/utils/incrementPlayCount.js); comment helpers [my-app/src/utils/commentUtils.js](my-app/src/utils/commentUtils.js).
+ - UI components: track cards, playlists, modals, navbar, etc. live under [my-app/src/components](my-app/src/components).
 
-Required environment variables
-- VITE_SUPABASE_URL — e.g. https://xxxx.supabase.co
-- VITE_SUPABASE_ANON_KEY — Supabase anon/public key
-- (Optional for advanced usage) VITE_SUPABASE_SERVICE_KEY — service_role (do NOT commit)
+ ## Stack and requirements
+ - React 18, Vite, Tailwind CSS.
+ - Supabase (Auth, Postgres, Storage, Edge Functions).
+ - Node 18+ recommended. npm for scripts.
 
-Supabase: recommended DB tables (compact)
-- profiles
-  - id (uuid, primary) — matches auth.user.id
-  - username (text)
-  - bio (text)
-  - location (text)
-  - avatar_url (text)
-  - updated_at (timestamp)
+ ## Setup (dev)
+ 1) Install deps
+ ```bash
+ npm install
+ ```
+ 2) Create `my-app/.env` with the variables below.
+ 3) Start dev server
+ ```bash
+ npm run dev
+ ```
+ 4) Open the shown Vite URL (default http://localhost:5173).
 
-- tracks
-  - id (uuid, primary)
-  - user_id (uuid) — foreign to profiles.id
-  - title, artist, album (text)
-  - audio_path (text) — storage path in `audio` bucket
-  - image_path (text) — storage path in `track-images` bucket
-  - mime_type (text)
-  - file_size (int)
-  - genre_id (int) — foreign to genres.id
-  - is_public (boolean)
-  - created_at, updated_at, deleted_at (timestamps)
+ ## Environment variables (my-app/.env)
+ - VITE_SUPABASE_URL — e.g. https://xxxx.supabase.co
+ - VITE_SUPABASE_ANON_KEY — Supabase anon/public key
+ - (Optional) VITE_SUPABASE_SERVICE_KEY — service_role for server-side or local admin tasks only (do not ship to clients)
 
-- genres
-  - id (int, primary)
-  - name (text)
-  - description (text)
+ ## Supabase schema (recommended)
+ - profiles: id (uuid, pk, matches auth.user.id), username, bio, location, avatar_url, updated_at.
+ - tracks: id (uuid), user_id (uuid fk profiles), title, artist, album, audio_path, image_path, mime_type, file_size, genre_id, is_public, created_at/updated_at/deleted_at.
+ - genres: id (int), name, description.
+ - playlists: id (uuid), owner (uuid), title, description, is_public, updated_at.
+ - playlist_tracks: id (uuid), playlist_id (uuid), track_id (uuid), position, added_by (uuid).
+ - followers: id (uuid), follower_id (uuid), followed_id (uuid), created_at.
+ - track_likes: id (uuid), user_id (uuid), track_id (uuid), created_at (used by `useLikesV2`).
+ - track_comments: id (uuid), track_id (uuid), user_id (uuid), body, created_at, updated_at, deleted_at (used by `useComments`).
 
-- playlists
-  - id (uuid)
-  - owner (uuid) — user id
-  - title (text)
-  - description (text)
-  - is_public (boolean)
-  - updated_at
+ ## Storage buckets
+ - audio (private): audio files served via signed URLs (default TTL 3600s in client code).
+ - track-images (public): cover art; append cache-busting query param after updates.
+ - avatars (public): user avatars.
 
-- playlist_tracks
-  - id (uuid)
-  - playlist_id (uuid)
-  - track_id (uuid)
-  - position (int)
-  - added_by (uuid)
+ ## Key flows
+ - Authentication: Supabase auth state is read in [my-app/src/Router.jsx](my-app/src/Router.jsx); unauthenticated users see the Supabase Auth UI and are redirected to /home after login.
+ - Playback: [my-app/src/App.jsx](my-app/src/App.jsx) builds a player API (play/pause/resume/stop/next/previous, queue length) and fetches signed URLs for private audio before playback.
+ - Play count: [my-app/src/utils/incrementPlayCount.js](my-app/src/utils/incrementPlayCount.js) calls the Edge Function `functions/v1/increase-playcount` with the user access token; [my-app/src/hooks/useIncrementPlayCount.js](my-app/src/hooks/useIncrementPlayCount.js) wraps it for React.
+ - Likes: [my-app/src/hooks/useLikesV2.js](my-app/src/hooks/useLikesV2.js) provides optimistic like/unlike with rate limiting (2s) and duplicate-request protection using `track_likes`.
+ - Comments: [my-app/src/hooks/useComments.js](my-app/src/hooks/useComments.js) handles fetch/post/edit/delete with 5s rate limit per track; uses [my-app/src/utils/commentUtils.js](my-app/src/utils/commentUtils.js) and `track_comments`.
+ - Upload: audio is validated client-side via [my-app/src/utils/securityUtils.js](my-app/src/utils/securityUtils.js) (type/size/extension checks) before uploading to Supabase storage.
 
-- followers
-  - id (uuid)
-  - follower_id (uuid)
-  - followed_id (uuid)
-  - created_at
+ ## Scripts
+ - npm run dev — start Vite dev server.
+ - npm run build — production build.
+ - npm run preview — preview production build.
+ - npm run lint — lint with ESLint 9.
+ - npm run deploy — deploy built `dist` to Cloudflare Pages via Wrangler (project: kohina-music-sharing-platform).
 
-Storage buckets & access rules
-- audio (private)
-  - Purpose: store uploaded audio files.
-  - Access: private — serve with signed URLs (createSignedUrl).
-  - Signed URL TTL: default code uses 3600s; adjust per need.
-- track-images (public)
-  - Purpose: cover art for tracks.
-  - Access: public read.
-- avatars (public)
-  - Purpose: user avatars.
-  - Access: public read.
-- Best practice: append a timestamp query param to public URLs after upload to bust caches when users update images.
+ ## Deployment notes
+ - Provide VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to the hosting environment.
+ - Build with `npm run build`, then serve `dist` (Cloudflare Pages via `npm run deploy`, or your host of choice).
+ - Ensure public assets (favicons, manifest, default avatar) remain under `public/` at build time.
 
-Project structure (high level)
-- src/
-  - App.jsx — global audio player, player API, signed URL logic
-  - Router.jsx — route definitions and auth gating
-  - supabaseclient.js — shared Supabase client + helpers
-  - pages/ — page-level components (Home, Profile, Upload)
-  - components/ — reusable UI (NavBar, UserProfile, AddToPlaylist, protectedRoutes)
-  - utils/ — helper utilities (e.g., securityUtils.js)
+ ## Troubleshooting
+ - Audio unavailable: ensure `tracks.audio_path` points to an existing object in the `audio` bucket and the signed URL is valid.
+ - Signed URL failures: verify bucket name/path and Supabase storage policies; check console network errors.
+ - Likes/comments not persisting: confirm RLS policies allow the user on `track_likes`/`track_comments`; watch rate-limit messages in the UI.
+ - Play count not increasing: confirm the Edge Function `increase-playcount` is deployed and Supabase JWT is sent; check function logs.
 
-Key behaviors
-- Authentication: Supabase Auth + Auth UI on the root route. ProtectedRoute wrapper enforces session presence.
-- Audio playback: App creates signed URL for private audio then sets audio.src, handles play/pause/stop and global state.
-- Avatars & track-images: public URLs with cache busting query param appended on upload.
+ ## Security and data protection
+ - Never commit keys. Keep `.env` out of version control.
+ - Enforce Supabase RLS: owners-only writes on profiles, tracks, playlists, comments, likes; public reads only where intended.
+ - Validate uploads server-side; client validation in [my-app/src/utils/securityUtils.js](my-app/src/utils/securityUtils.js) is for UX, not security.
+ - Consider quotas and rate limits for uploads and interactions; client-side rate limits exist for likes and comments.
 
-Common scripts
-- npm run dev — start dev server
-- npm run build — build for production (Vite)
-- npm run preview — preview production build (Vite)
-- npm test — (if tests exist) run unit tests
-
-Deployment notes
-- Provide VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to your hosting platform (Vercel, Netlify, etc.).
-- Ensure static assets (public/default-avatar.png and any background images) are included in build output.
-- For production consider rotating keys and limiting service_role usage to server-side operations only.
-
-Troubleshooting
-- "Audio unavailable" — confirm file exists in storage and audio_path saved in tracks table.
-- Signed URL errors — ensure the bucket name and object path are correct; check permissions in Supabase storage policy.
-- CORS/Playback errors — confirm your hosting and Supabase project allow requests from your app origin; check browser console for network errors.
-
-Security & best practices
-- Never commit VITE_SUPABASE_ANON_KEY or service keys to public repos.
-- Validate uploads server-side where possible; client-side validation (src/utils/securityUtils.js) helps UX but is not sufficient.
-- Use RLS (row-level security) policies in Supabase to prevent unauthorized writes/reads (e.g., profiles upsert allowed only for the profile owner).
-- For sensitive admin operations require a server-side function using the service_role key.
-
-Schema & migration tips
-- Keep a SQL file or use Supabase SQL migrations to define tables and indexes.
-- Add unique constraint for followers (follower_id, followed_id) to prevent duplicates.
-- Add db index on tracks.user_id, tracks.is_public, playlists.owner for query performance.
-
-Contributing
-- Use branches for features/fixes.
-- Follow existing code patterns: data fetching inside useEffect, keep UI state local to components, centralize Supabase usage via src/supabaseclient.js.
-- Add tests for any business logic added to utils/.
-
-Contact
-- Developer: Matia (local project). Use repository issues for clarifications or to propose schema changes.
-
-License
-- Keep project license in repo (e.g., MIT) — add LICENSE file if needed.
-
-Appendix — Quick example: create a signed URL (client)
-- In App.jsx the flow is:
-  1. supabase.storage.from('audio').createSignedUrl(path, 3600)
-  2. set audio element src to returned signedUrl
-  3. play()
-
-Appendix — Minimal RLS hints
-- profiles: allow update where auth.uid() = id
-- tracks: allow insert where auth.uid() = user_id; allow read where is_public = true or user_id = auth.uid()
+ ## Contributing and contact
+ - Use feature branches; keep data fetching in effects and centralize Supabase access through [my-app/src/supabaseclient.js](my-app/src/supabaseclient.js).
+ - Add tests for new business logic in utils or hooks.
+ - Contact: Matia (project owner). Use repo issues for questions or schema proposals.
