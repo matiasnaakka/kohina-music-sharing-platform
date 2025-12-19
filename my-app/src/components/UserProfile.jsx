@@ -119,7 +119,7 @@ const UserProfile = ({ session, isModal = false, onClose, readOnly = false }) =>
       console.log('Uploading avatar...', uploadFile.name, 'size', uploadFile.size)
       
       // Upload avatar to Supabase Storage
-      const { data: uploadData, error: uploadError } = await supabase.storage
+      const { error: uploadError } = await supabase.storage
         .from('avatars')
         .upload(path, uploadFile, { upsert: true, contentType: uploadFile.type })
         

@@ -8,18 +8,14 @@ const PasswordResetForm = ({ onResetComplete }) => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(null)
-  const [isPasswordRecoveryMode, setIsPasswordRecoveryMode] = useState(false)
 
   useEffect(() => {
     // Listen for PASSWORD_RECOVERY event when user clicks reset link
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (event === 'PASSWORD_RECOVERY') {
-          setIsPasswordRecoveryMode(true)
-          setError(null)
-        }
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setError(null)
       }
-    )
+    })
 
     return () => {
       authListener?.subscription.unsubscribe()

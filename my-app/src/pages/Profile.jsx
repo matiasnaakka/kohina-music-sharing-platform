@@ -1,7 +1,7 @@
-import { useEffect, useState, lazy, Suspense, useMemo } from 'react'
+import { useEffect, useState, lazy, Suspense, useMemo, useCallback } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import NavBar from '../components/NavBar'
-import { supabase, getPublicStorageUrl } from '../supabaseclient'
+import { supabase } from '../supabaseclient'
 import UserProfile from '../components/UserProfile'
 const AddToPlaylist = lazy(() => import('../components/AddToPlaylist'))
 const TrackComments = lazy(() => import('../components/TrackComments'))
@@ -204,7 +204,6 @@ export default function Profile({ session, player }) {
         if (isMounted) {
           setPublicLoading(false)
           setPublicPlaylistsLoading(false)
-          console.log(profileData, "what is this")
         }
       }
     }
@@ -466,11 +465,11 @@ export default function Profile({ session, player }) {
     }
   }
 
-  const closeFollowModal = () => {
+  const closeFollowModal = useCallback(() => {
     setFollowModal({ open: false, type: null, userId: null })
     setFollowModalUsers([])
     setFollowModalError(null)
-  }
+  }, [])
 
   const handleProfileSelect = (userId) => {
     closeFollowModal()
@@ -571,7 +570,10 @@ export default function Profile({ session, player }) {
         }
         if (active) setLikedTracksLikeCounts(counts)
       } catch (err) {
-        if (active) setLikedTracksLikeCounts(new Map())
+        if (active) {
+          console.warn('Failed to load liked track counts', err)
+          setLikedTracksLikeCounts(new Map())
+        }
       }
     }
 
@@ -603,7 +605,7 @@ export default function Profile({ session, player }) {
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [followModal.open]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [followModal.open, closeFollowModal])
 
   return (
     <div className="min-h-screen bg-black text-white">

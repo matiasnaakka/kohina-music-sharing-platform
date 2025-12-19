@@ -54,7 +54,6 @@ const Routing = ({ player }) => {
 
   // Cloudflare Pages friendly
   const redirectToHome = useMemo(() => `${window.location.origin}/home`, [])
-  const redirectToReset = useMemo(() => `${window.location.origin}/reset-password`, [])
 
   useEffect(() => {
     // Set loading state to true while we check for an existing session
@@ -80,7 +79,7 @@ const Routing = ({ player }) => {
     if (!loading && !session) {
       player?.stop?.()
     }
-  }, [loading, session])
+  }, [loading, session, player])
 
   return (
     <BrowserRouter>

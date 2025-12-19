@@ -9,7 +9,6 @@ const AddToPlaylist = ({ session, track, buttonClassName = 'bg-gray-700 text-whi
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [playlists, setPlaylists] = useState([])
-  const [selectedPlaylistId, setSelectedPlaylistId] = useState(null)
   const [feedback, setFeedback] = useState(null)
   const [error, setError] = useState(null)
   const [newPlaylist, setNewPlaylist] = useState({ title: '', description: '', is_public: true })
@@ -105,7 +104,6 @@ const AddToPlaylist = ({ session, track, buttonClassName = 'bg-gray-700 text-whi
         .single()
       if (playlistError) throw playlistError
       setPlaylists((prev) => [...prev, data])
-      setSelectedPlaylistId(data.id)
       setNewPlaylist({ title: '', description: '', is_public: true })
       await addTrackToPlaylist(data.id)
     } catch (err) {
@@ -139,7 +137,6 @@ const AddToPlaylist = ({ session, track, buttonClassName = 'bg-gray-700 text-whi
                 className="text-gray-300 hover:text-white text-xl"
                 onClick={() => {
                   setOpen(false)
-                  setSelectedPlaylistId(null)
                   setFeedback(null)
                   setError(null)
                 }}

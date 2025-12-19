@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { supabase, getPublicStorageUrl } from '../supabaseclient'
 import imageCompression from 'browser-image-compression'
 import NavBar from '../components/NavBar'
@@ -129,14 +129,6 @@ export default function Upload({ session, player }) {
   const [loadingGenres, setLoadingGenres] = useState(false)
   const [imageProcessingTrackId, setImageProcessingTrackId] = useState(null)
   
-  // Fetch user's tracks and genres
-  useEffect(() => {
-    if (session) {
-      fetchUserTracks()
-      fetchGenres()
-    }
-  }, [session])
-  
   useEffect(() => {
     if (!session?.user?.id) return
     const loadAvatar = async () => {
@@ -150,7 +142,7 @@ export default function Upload({ session, player }) {
     loadAvatar()
   }, [session?.user?.id])
   
-  const fetchGenres = async () => {
+  const fetchGenres = useCallback(async () => {
     setLoadingGenres(true)
     try {
       const { data, error } = await supabase
@@ -171,9 +163,9 @@ export default function Upload({ session, player }) {
     } finally {
       setLoadingGenres(false)
     }
-  }
+  }, [])
   
-  const fetchUserTracks = async () => {
+  const fetchUserTracks = useCallback(async () => {
     setLoadingTracks(true)
     try {
       const { data, error } = await supabase
@@ -202,7 +194,15 @@ export default function Upload({ session, player }) {
     } finally {
       setLoadingTracks(false)
     }
-  }
+  }, [session?.user?.id])
+
+  // Fetch user's tracks and genres
+  useEffect(() => {
+    if (session) {
+      fetchUserTracks()
+      fetchGenres()
+    }
+  }, [session, fetchUserTracks, fetchGenres])
   
   const handleFileChange = async (e) => {
     const selectedFile = e.target.files?.[0]
@@ -517,7 +517,7 @@ export default function Upload({ session, player }) {
     setLoading(true)
     
     // 1. Get the track details
-    const { data: trackData, error: fetchError } = await supabase
+    const { error: fetchError } = await supabase
       .from('tracks')
       .select('audio_path, image_path')
       .eq('id', trackId)

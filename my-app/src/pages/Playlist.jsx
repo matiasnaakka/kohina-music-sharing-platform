@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseclient'
 import NavBar from '../components/NavBar'
@@ -24,23 +24,7 @@ export default function Playlist({ session, player }) {
 
   const { isLiked, toggleLike, fetchLikedTracks } = useLikesV2(session?.user?.id)
 
-  useEffect(() => {
-    if (!playlistId) {
-      setError('Playlist ID not provided')
-      setLoading(false)
-      return
-    }
-    fetchPlaylist()
-  }, [playlistId, session?.user?.id])
-
-  useEffect(() => {
-    const trackIds = tracks.map((t) => t.id)
-    if (trackIds.length > 0) {
-      fetchLikedTracks(trackIds)
-    }
-  }, [tracks, fetchLikedTracks])
-
-  const fetchPlaylist = async () => {
+  const fetchPlaylist = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
@@ -127,7 +111,23 @@ export default function Playlist({ session, player }) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [playlistId, session?.user?.id])
+
+  useEffect(() => {
+    if (!playlistId) {
+      setError('Playlist ID not provided')
+      setLoading(false)
+      return
+    }
+    fetchPlaylist()
+  }, [playlistId, session?.user?.id, fetchPlaylist])
+
+  useEffect(() => {
+    const trackIds = tracks.map((t) => t.id)
+    if (trackIds.length > 0) {
+      fetchLikedTracks(trackIds)
+    }
+  }, [tracks, fetchLikedTracks])
 
   const handleRemoveTrack = async (playlistTrackId) => {
     if (!isOwner) return

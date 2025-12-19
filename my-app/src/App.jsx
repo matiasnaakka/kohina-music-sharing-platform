@@ -23,7 +23,6 @@ const App = () => {
   const [session, setSession] = useState(null)
   const audioRef = useRef(null)
   const lastPlayPromiseRef = useRef(null)
-  const [volume, setVolume] = useState(0.8) // default 80%
   const [queue, setQueue] = useState([])
   const [queueIndex, setQueueIndex] = useState(0)
 
@@ -218,7 +217,7 @@ const App = () => {
       audio.removeEventListener('ended', handleEnded)
       audio.removeEventListener('error', handleError)
     }
-  }, [audioRef.current])
+  }, [audioRef])
 
   useEffect(() => {
     const audio = audioRef.current
@@ -441,11 +440,6 @@ const App = () => {
     return () => style.remove()
   }, [])
 
-  useEffect(() => {
-    const audio = audioRef.current
-    if (audio) audio.volume = volume
-  }, [volume])
-
   return (
     <>
       <Routing player={player} />
@@ -456,8 +450,6 @@ const App = () => {
         resume={resume}
         stop={stop}
         session={session}
-        volume={volume}
-        setVolume={setVolume}
         onNext={nextTrack}
         onPrev={prevTrack}
         canNavigate={queue.length > 1}
@@ -474,8 +466,6 @@ const GlobalAudioPlayer = ({
   resume,
   stop,
   session,
-  volume,
-  setVolume,
   onNext,
   onPrev,
   canNavigate,
@@ -483,12 +473,6 @@ const GlobalAudioPlayer = ({
   const { track, isPlaying, loading, error } = playerState
   const { increment: incrementPlayCount } = useIncrementPlayCount()
   const timerRef = useRef(null)
-  const canvasRef = useRef(null)
-  const audioCtxRef = useRef(null)
-  const analyserRef = useRef(null)
-  const sourceRef = useRef(null)
-  const dataArrayRef = useRef(null)
-  const animationRef = useRef(null)
   const lastPrevClickRef = useRef(0)
   const [progress, setProgress] = useState(0) // 0..1
   const [duration, setDuration] = useState(0)
@@ -586,7 +570,7 @@ const GlobalAudioPlayer = ({
       audio.removeEventListener('ended', clearTimer)
       audio.removeEventListener('stalled', clearTimer)
     }
-  }, [track?.id, incrementPlayCount, session?.user?.id])
+  }, [track?.id, incrementPlayCount, session?.user?.id, COOLDOWN_MS, THRESHOLD_MS, audioRef])
 
   useEffect(() => {
     const audio = audioRef.current
@@ -610,7 +594,7 @@ const GlobalAudioPlayer = ({
       audio.removeEventListener('timeupdate', onTime)
       audio.removeEventListener('ended', onEnded)
     }
-  }, [track?.id])
+  }, [track?.id, audioRef])
 
   const handleSeek = (e) => {
     e.stopPropagation()
@@ -620,13 +604,6 @@ const GlobalAudioPlayer = ({
     const ratio = Math.min(Math.max((e.clientX - rect.left) / rect.width, 0), 1)
     audio.currentTime = ratio * duration
     setProgress(ratio)
-  }
-
-  const handleVolume = (e) => {
-    const next = Number(e.target.value)
-    setVolume(next)
-    const audio = audioRef.current
-    if (audio) audio.volume = next
   }
 
   // Previous button behavior:
@@ -650,8 +627,6 @@ const GlobalAudioPlayer = ({
       audio.currentTime = 0
     }
   }
-
-  // Helper to stop propagation on control clicks
   const withStop = (fn) => (e) => {
     e.stopPropagation()
     fn?.()

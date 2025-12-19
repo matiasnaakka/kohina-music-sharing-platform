@@ -44,7 +44,7 @@ const NavBar = ({ session, onSignOut }) => {
             // ignore storage failures
           }
         }
-      } catch (err) {
+      } catch {
         if (isMounted) setAvatarUrl(null)
       }
     }

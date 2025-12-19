@@ -5,7 +5,7 @@ import { getPublicStorageUrl } from '../supabaseclient'
 const AddToPlaylist = lazy(() => import('./AddToPlaylist'))
 const TrackComments = lazy(() => import('./TrackComments'))
 
-export const formatDaysAgo = (value) => {
+const formatDaysAgo = (value) => {
   if (!value) return 'Unknown date'
   const posted = new Date(value)
   if (Number.isNaN(posted.getTime())) return 'Unknown date'

@@ -1,4 +1,4 @@
-import { useState, useEffect, lazy, Suspense, useMemo } from 'react'
+import { useState, useEffect, lazy, Suspense, useMemo, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase, getPublicStorageUrl } from '../supabaseclient'
 import NavBar from '../components/NavBar'
@@ -20,7 +20,7 @@ export default function Home({ session, player }) {
   const [ownPlaylistsLoading, setOwnPlaylistsLoading] = useState(false)
   const [ownPlaylistsError, setOwnPlaylistsError] = useState(null)
   const [playlistCovers, setPlaylistCovers] = useState(new Map())
-  const { isLiked, toggleLike, loading: likesLoading, fetchLikedTracks } = useLikesV2(session?.user?.id)
+  const { isLiked, toggleLike, fetchLikedTracks } = useLikesV2(session?.user?.id)
   const [expandedComments, setExpandedComments] = useState(null)
 
   // NEW: sort controls
@@ -28,15 +28,6 @@ export default function Home({ session, player }) {
   const [sortOrder, setSortOrder] = useState('desc') // 'desc' | 'asc'
   const [likeCounts, setLikeCounts] = useState(new Map())
   const [likeCountsLoading, setLikeCountsLoading] = useState(false)
-
-  // Fetch tracks and genres on component mount
-  useEffect(() => {
-    fetchGenres()
-    fetchTracks()
-    if (session?.user?.id) {
-      fetchOwnPlaylists(session.user.id)
-    }
-  }, [session?.user?.id])
 
   // Fetch display name (username) of the logged-in user
   useEffect(() => {
@@ -61,9 +52,9 @@ export default function Home({ session, player }) {
       }
     }
     loadName()
-  }, [session?.user?.id])
+  }, [session?.user?.id, session?.user?.email])
 
-  const fetchGenres = async () => {
+  const fetchGenres = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('genres')
@@ -76,9 +67,9 @@ export default function Home({ session, player }) {
       console.error('Error fetching genres:', err)
       setError('Failed to load genres')
     }
-  }
+  }, [])
 
-  const fetchTracks = async () => {
+  const fetchTracks = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
@@ -132,32 +123,9 @@ export default function Home({ session, player }) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
-  const fetchOwnPlaylists = async (userId) => {
-    setOwnPlaylistsLoading(true)
-    setOwnPlaylistsError(null)
-    try {
-      const { data, error } = await supabase
-        .from('playlists')
-        .select('id, title, description, is_public, updated_at')
-        .eq('owner', userId)
-        .order('updated_at', { ascending: false })
-        .limit(10)
-
-      if (error) throw error
-      setOwnPlaylists(data || [])
-      await fetchPlaylistCovers(data || [])
-    } catch (err) {
-      setOwnPlaylists([])
-      setOwnPlaylistsError(err.message)
-      setPlaylistCovers(new Map())
-    } finally {
-      setOwnPlaylistsLoading(false)
-    }
-  }
-
-  const fetchPlaylistCovers = async (playlists) => {
+  const fetchPlaylistCovers = useCallback(async (playlists) => {
     if (!playlists || playlists.length === 0) {
       setPlaylistCovers(new Map())
       return
@@ -193,7 +161,39 @@ export default function Home({ session, player }) {
       console.warn('Failed to fetch playlist covers', err)
       setPlaylistCovers(new Map())
     }
-  }
+  }, [])
+
+  const fetchOwnPlaylists = useCallback(async (userId) => {
+    setOwnPlaylistsLoading(true)
+    setOwnPlaylistsError(null)
+    try {
+      const { data, error } = await supabase
+        .from('playlists')
+        .select('id, title, description, is_public, updated_at')
+        .eq('owner', userId)
+        .order('updated_at', { ascending: false })
+        .limit(10)
+
+      if (error) throw error
+      setOwnPlaylists(data || [])
+      await fetchPlaylistCovers(data || [])
+    } catch (err) {
+      setOwnPlaylists([])
+      setOwnPlaylistsError(err.message)
+      setPlaylistCovers(new Map())
+    } finally {
+      setOwnPlaylistsLoading(false)
+    }
+  }, [fetchPlaylistCovers])
+
+  // Fetch tracks, genres, and playlists on mount/user change
+  useEffect(() => {
+    fetchGenres()
+    fetchTracks()
+    if (session?.user?.id) {
+      fetchOwnPlaylists(session.user.id)
+    }
+  }, [session?.user?.id, fetchGenres, fetchTracks, fetchOwnPlaylists])
 
   // Filter tracks when genre selection changes (now supports multi-select)
   useEffect(() => {
