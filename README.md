@@ -66,6 +66,7 @@
  ## Storage buckets
  - audio (private): audio files served via signed URLs (default TTL 3600s in client code).
  - track-images (public): cover art; append cache-busting query param after updates.
+ - user-backgrounds (public): background images in profile pages.
  - avatars (public): user avatars.
 
  ## Key flows
