@@ -1,6 +1,6 @@
  # Kohina — Developer Guide
 
- React + Supabase music sharing app. Users upload audio, add covers, create playlists, follow creators, and play tracks through a global audio player with queue controls.
+React + Supabase music sharing app. Live at https://kohinasound.com/. Users upload audio, add covers, create playlists, follow creators, and play tracks through a global audio player with queue controls.
 
  ## Contents
  - What it does
@@ -66,7 +66,6 @@
  ## Storage buckets
  - audio (private): audio files served via signed URLs (default TTL 3600s in client code).
  - track-images (public): cover art; append cache-busting query param after updates.
- - user-backgrounds (public): background images in profile pages.
  - avatars (public): user avatars.
 
  ## Key flows
@@ -104,4 +103,4 @@
  ## Contributing and contact
  - Use feature branches; keep data fetching in effects and centralize Supabase access through [my-app/src/supabaseclient.js](my-app/src/supabaseclient.js).
  - Add tests for new business logic in utils or hooks.
- - Contact: Matia (project owner). Use repo issues for questions or schema proposals.
+ - Contact: Matias (project owner). Use repo issues for questions or schema proposals.
