@@ -128,6 +128,8 @@ export default function Upload({ session, player }) {
   const [genres, setGenres] = useState([])
   const [loadingGenres, setLoadingGenres] = useState(false)
   const [imageProcessingTrackId, setImageProcessingTrackId] = useState(null)
+  const [editingMetadata, setEditingMetadata] = useState({})
+  const [metadataSavingId, setMetadataSavingId] = useState(null)
   
   useEffect(() => {
     if (!session?.user?.id) return
@@ -203,7 +205,19 @@ export default function Upload({ session, player }) {
       fetchGenres()
     }
   }, [session, fetchUserTracks, fetchGenres])
-  
+
+  useEffect(() => {
+    setEditingMetadata((prev) => {
+      const next = { ...prev }
+      tracks.forEach((t) => {
+        if (!next[t.id]) {
+          next[t.id] = { title: t.title || '', description: t.description || '' }
+        }
+      })
+      return next
+    })
+  }, [tracks])
+
   const handleFileChange = async (e) => {
     const selectedFile = e.target.files?.[0]
     if (!selectedFile) return
@@ -554,6 +568,45 @@ export default function Upload({ session, player }) {
   const handleSignOut = async () => {
     await supabase.auth.signOut()
   }
+
+  const handleMetadataChange = (trackId, field, value) => {
+    setEditingMetadata((prev) => ({
+      ...prev,
+      [trackId]: {
+        ...prev[trackId],
+        [field]: value,
+      },
+    }))
+  }
+
+  const handleSaveMetadata = async (trackId) => {
+    const draft = editingMetadata[trackId] || {}
+    if (!draft.title?.trim()) {
+      setError('Title is required')
+      return
+    }
+    setMetadataSavingId(trackId)
+    setError(null)
+    setSuccess(null)
+    try {
+      const description = draft.description?.trim() || ''
+      const { error: updateError } = await supabase
+        .from('tracks')
+        .update({
+          title: draft.title.trim(),
+          description,
+        })
+        .eq('id', trackId)
+        .eq('user_id', session.user.id)
+      if (updateError) throw new Error(updateError.message)
+      setSuccess('Track details updated.')
+      fetchUserTracks()
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setMetadataSavingId(null)
+    }
+  }
   
   return (
     <div className="min-h-screen bg-black text-white">
@@ -701,6 +754,7 @@ export default function Upload({ session, player }) {
                   player.playTrack(track, tracks)
                 }
               }
+              const metaDraft = editingMetadata[track.id] || { title: track.title || '', description: track.description || '' }
               return (
                 <div key={track.id} className="bg-gray-800 p-4 rounded flex flex-col md:flex-row gap-4">
                   <img
@@ -710,10 +764,31 @@ export default function Upload({ session, player }) {
                     onError={(e) => { e.target.src = profileAvatarUrl || '/images/default-avatar.png' }}
                   />
                   <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-2 flex-1">
-                    <div>
-                      <h3 className="font-bold">{track.title}</h3>
+                    <div className="w-full">
+                      <input
+                        type="text"
+                        value={metaDraft.title}
+                        onChange={(e) => handleMetadataChange(track.id, 'title', e.target.value)}
+                        className="w-full mb-1 p-2 rounded bg-gray-700 text-white font-bold"
+                        placeholder="Track title"
+                      />
                       <p>{track.artist} {track.album ? `• ${track.album}` : ''}</p>
-                      <p className="text-sm text-gray-400">
+                      <textarea
+                        value={metaDraft.description || ''}
+                        onChange={(e) => handleMetadataChange(track.id, 'description', e.target.value)}
+                        className="w-full mt-2 p-2 rounded bg-gray-700 text-white text-sm"
+                        placeholder="Description"
+                        rows={2}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleSaveMetadata(track.id)}
+                        className="mt-2 bg-blue-500 text-white px-3 py-1 rounded text-sm font-semibold hover:bg-blue-400 disabled:opacity-60"
+                        disabled={metadataSavingId === track.id}
+                      >
+                        {metadataSavingId === track.id ? 'Saving...' : 'Save changes'}
+                      </button>
+                      <p className="text-sm text-gray-400 mt-2">
                         {track.genres ? track.genres.name : 'No genre'} • {track.is_public ? 'Public' : 'Private'}
                         {track.mime_type && ` • ${track.mime_type.split('/')[1]}`}
                         {track.file_size && ` • ${Math.round(track.file_size / 1024)} KB`}
