@@ -1,4 +1,8 @@
- # Kohina — Developer Guide
+# Kohina — Full-Stack Project & Developer Guide
+ 
+ ## Project status
+Kohina is an actively developed project, designed, built, and maintained by a single developer.
+Core functionality is live and in use, and new features, refactors, and improvements are continuously being added.
 
 React + Supabase music sharing app. Live at https://kohinasound.com/. Users upload audio, add covers, create playlists, follow creators, and play tracks through a global audio player with queue controls.
 
