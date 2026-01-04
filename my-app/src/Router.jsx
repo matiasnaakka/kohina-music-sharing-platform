@@ -75,6 +75,7 @@ const Routing = ({ player }) => {
     return () => subscription.unsubscribe()
   }, [])
 
+  // Stop playback when user logs out
   useEffect(() => {
     if (!loading && !session) {
       player?.stop?.()
@@ -82,6 +83,7 @@ const Routing = ({ player }) => {
   }, [loading, session])
 
   return (
+
     <BrowserRouter>
       <ScrollToTop />
       <Routes>
@@ -117,7 +119,6 @@ const Routing = ({ player }) => {
             )
           }
         />
-
         {/* Password reset route - handles callback from email link */}
         <Route
           path="/reset-password"
@@ -130,7 +131,6 @@ const Routing = ({ player }) => {
             />
           }
         />
-
         {/* Protected pages */}
         <Route
           path="/home"

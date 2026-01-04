@@ -309,7 +309,7 @@ const App = () => {
         m.setAttribute('content', content)
       }
       ensureMeta('theme-color', '#14b8a6')
-      ensureMeta('apple-mobile-web-app-capable', 'yes')
+      ensureMeta('mobile-web-app-capable', 'yes')
       ensureMeta('apple-mobile-web-app-status-bar-style', 'black')
 
       // Register Service Worker via Blob (no new file needed)
