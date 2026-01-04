@@ -274,7 +274,7 @@ export default function Home({ session, player }) {
                 <li key={playlist.id}>
                   <Link
                     to={`/playlist?id=${playlist.id}`}
-                    className="block bg-gray-800 hover:bg-gray-700 px-3 py-2 rounded transition min-h-[64px]"
+                    className="block bg-gray-800 hover:bg-gray-700 px-3 py-2 rounded transition min-h-16"
                   >
                     <div className="flex items-center gap-3">
                       <img
