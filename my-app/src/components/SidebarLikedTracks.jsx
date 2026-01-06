@@ -45,7 +45,8 @@ export default function SidebarLikedTracks({
             if (isActive) {
               player.isPlaying ? player.pause() : player.resume()
             } else {
-              player.playTrack(track)
+              // Pass the full liked-tracks list so next/previous buttons work
+              player.playTrack(track, tracks)
             }
           }
           const trackIsLiked = isTrackLiked(track.id)
