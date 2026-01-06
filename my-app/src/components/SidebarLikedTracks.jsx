@@ -13,6 +13,7 @@ export default function SidebarLikedTracks({
   isTrackLiked,
   onToggleLike,
   likeCounts,
+  isAuthenticated = false,
   title = 'Liked Tracks',
 }) {
   if (loading) return <aside className="bg-gray-900 bg-opacity-80 p-4 rounded"><div className="text-gray-400 text-sm">Loading...</div></aside>
@@ -106,15 +107,17 @@ export default function SidebarLikedTracks({
                 ) : (
                   <span className="text-red-400 text-xs">No audio</span>
                 )}
-                <button
-                  type="button"
-                  onClick={() => onToggleLike(track.id)}
-                  className={`px-1 py-0.5 rounded text-xs transition ${
-                    trackIsLiked ? 'bg-red-500 text-white hover:bg-red-400' : 'bg-gray-700 text-white hover:bg-gray-600'
-                  }`}
-                >
-                  {trackIsLiked ? '❤️' : '🤍'}
-                </button>
+                {isAuthenticated && (
+                  <button
+                    type="button"
+                    onClick={() => onToggleLike(track.id)}
+                    className={`px-1 py-0.5 rounded text-xs transition ${
+                      trackIsLiked ? 'bg-red-500 text-white hover:bg-red-400' : 'bg-gray-700 text-white hover:bg-gray-600'
+                    }`}
+                  >
+                    {trackIsLiked ? '❤️' : '🤍'}
+                  </button>
+                )}
                 <Suspense fallback={null}>
                   <AddToPlaylist
                     session={session}

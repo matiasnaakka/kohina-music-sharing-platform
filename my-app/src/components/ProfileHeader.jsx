@@ -10,12 +10,15 @@ export default function ProfileHeader({
   followLoading,
   isFollowing,
   followError,
+  isAuthenticated = true,
 }) {
   const avatar = profile?.avatar_url || '/images/default-avatar.png'
   const background = profile?.background_url
   const headerStyle = background
     ? { backgroundImage: `linear-gradient(180deg, rgba(0,0,0,0.6), rgba(0,0,0,0.85)), url(${background})` }
     : {}
+  const followerLabel = followerCount === 1 ? '1 follower' : `${followerCount} followers`
+  const followingLabel = `Following ${followingCount}`
 
   return (
     <div
@@ -37,27 +40,29 @@ export default function ProfileHeader({
           }}
         />
         <div className="ml-auto flex flex-col items-end gap-2">
-          {isOwn ? (
-            <button
-              onClick={onEditProfile}
-              className="px-4 py-2 rounded font-semibold bg-cyan-500 text-white hover:bg-cyan-700"
-            >
-              Profile settings
-            </button>
-          ) : (
-            <button
-              onClick={onFollowToggle}
-              disabled={followLoading}
-              className={`px-4 py-2 rounded-2xl font-semibold transition ${
-                followLoading ? 'opacity-70 cursor-not-allowed' : ''
-              } ${
-                isFollowing ? 'bg-gray-700 text-white hover:bg-gray-600' : 'bg-amber-500 text-white hover:bg-amber-300'
-              }`}
-            >
-              {followLoading ? 'Processing...' : isFollowing ? 'Unfollow' : 'Follow'}
-            </button>
+          {isAuthenticated && (
+            isOwn ? (
+              <button
+                onClick={onEditProfile}
+                className="px-4 py-2 rounded font-semibold bg-cyan-500 text-white hover:bg-cyan-700"
+              >
+                Profile settings
+              </button>
+            ) : (
+              <button
+                onClick={onFollowToggle}
+                disabled={followLoading}
+                className={`px-4 py-2 rounded-2xl font-semibold transition ${
+                  followLoading ? 'opacity-70 cursor-not-allowed' : ''
+                } ${
+                  isFollowing ? 'bg-gray-700 text-white hover:bg-gray-600' : 'bg-amber-500 text-white hover:bg-amber-300'
+                }`}
+              >
+                {followLoading ? 'Processing...' : isFollowing ? 'Unfollow' : 'Follow'}
+              </button>
+            )
           )}
-          {!isOwn && followError && <span className="text-2xl text-red-400">{followError}</span>}
+          {!isOwn && isAuthenticated && followError && <span className="text-2xl text-red-400">{followError}</span>}
         </div>
       </div>
 
@@ -72,7 +77,7 @@ export default function ProfileHeader({
             onClick={onFollowersClick}
             className="hover:text-white underline-offset-2 hover:underline"
           >
-            {followerCount === 1 ? '1 follower' : `${followerCount} followers`}
+            {followerLabel}
           </button>
           <span>•</span>
           <button
@@ -80,7 +85,7 @@ export default function ProfileHeader({
             onClick={onFollowingClick}
             className="hover:text-white underline-offset-2 hover:underline"
           >
-            Following {followingCount}
+            {followingLabel}
           </button>
         </span>
       </div>

@@ -58,6 +58,18 @@ const NavBar = ({ session, onSignOut }) => {
   }
 
   const confirmSignOut = () => {
+    try {
+      if (session?.user?.id) {
+        sessionStorage.removeItem(`navbar_avatar:${session.user.id}`)
+      } else {
+        // Fallback: clear any navbar_avatar cache
+        Object.keys(sessionStorage)
+          .filter((k) => k.startsWith('navbar_avatar:'))
+          .forEach((k) => sessionStorage.removeItem(k))
+      }
+    } catch {
+      // ignore storage errors
+    }
     onSignOut()
     setShowLogoutConfirm(false)
     setMobileMenuOpen(false)
@@ -73,11 +85,13 @@ const NavBar = ({ session, onSignOut }) => {
 
   return (
     <nav className="w-full flex items-center justify-between px-4 sm:px-6 py-4 bg-black bg-opacity-80 fixed top-0 left-0 z-30">
-      <Link to="/home" className="text-white font-['Lalezar'] text-xl sm:text-2xl shrink-0">Kohina</Link>
-      
-      {session && (
+      <Link to="/home" className="text-white font-['Lalezar'] text-xl sm:text-2xl shrink-0">
+        Kohina
+      </Link>
+
+      {session ? (
         <>
-          {/* Desktop Navigation */}
+          {/* Desktop Navigation - Authenticated */}
           <div className="hidden sm:flex items-center gap-4">
             <Link to="/home" className="text-white hover:underline text-sm md:text-base">
               Home
@@ -88,8 +102,6 @@ const NavBar = ({ session, onSignOut }) => {
             <Link to="/upload" className="text-white hover:underline text-sm md:text-base">
               Upload
             </Link>
-
-            {/* Profile avatar (clickable to profile) */}
             <Link
               to="/profile"
               className="inline-block"
@@ -108,7 +120,6 @@ const NavBar = ({ session, onSignOut }) => {
                 onError={(e) => { e.target.src = '/images/default-avatar.png' }}
               />
             </Link>
-
             <button
               onClick={handleSignOutClick}
               className="bg-green-500 text-black px-3 py-1 rounded text-sm hover:bg-green-400 font-medium"
@@ -117,7 +128,7 @@ const NavBar = ({ session, onSignOut }) => {
             </button>
           </div>
 
-          {/* Mobile Menu Button */}
+          {/* Mobile Menu Button - Authenticated */}
           <div className="sm:hidden flex items-center gap-3">
             <Link
               to="/profile"
@@ -145,7 +156,7 @@ const NavBar = ({ session, onSignOut }) => {
             </button>
           </div>
 
-          {/* Mobile Menu Dropdown */}
+          {/* Mobile Menu Dropdown - Authenticated */}
           {mobileMenuOpen && (
             <div className="absolute top-full left-0 right-0 bg-black bg-opacity-95 border-b border-gray-700 sm:hidden">
               <div className="flex flex-col gap-4 p-4">
@@ -199,6 +210,41 @@ const NavBar = ({ session, onSignOut }) => {
                     Sign Out
                   </button>
                 </div>
+              </div>
+            </div>
+          )}
+        </>
+      ) : (
+        <>
+          {/* Desktop Navigation - Anonymous */}
+          <div className="hidden sm:flex items-center gap-4">
+            <Link to="/authentication" className="text-white hover:underline text-sm md:text-base">
+              Login/Register
+            </Link>
+          </div>
+
+          {/* Mobile Menu Button - Anonymous */}
+          <div className="sm:hidden flex items-center gap-3">
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="text-white text-2xl hover:text-gray-300"
+              aria-label="Toggle menu"
+            >
+              ☰
+            </button>
+          </div>
+
+          {/* Mobile Menu Dropdown - Anonymous */}
+          {mobileMenuOpen && (
+            <div className="absolute top-full left-0 right-0 bg-black bg-opacity-95 border-b border-gray-700 sm:hidden">
+              <div className="flex flex-col gap-4 p-4">
+                <Link
+                  to="/authentication"
+                  onClick={closeMobileMenu}
+                  className="text-white hover:text-teal-300 text-base font-medium"
+                >
+                  Login/Register
+                </Link>
               </div>
             </div>
           )}

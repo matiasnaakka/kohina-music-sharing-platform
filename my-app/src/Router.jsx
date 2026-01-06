@@ -13,11 +13,11 @@ import PasswordResetForm from './components/PasswordResetForm'
 import Playlist from './pages/Playlist'
 import Privacy from './pages/Privacy'
 import Terms from './pages/Terms'
+import Track from './pages/Track'
 
 // Scroll to top on route change for SPA navigation
 const ScrollToTop = () => {
   const { pathname } = useLocation()
-
   useEffect(() => {
     // Use instant jump to avoid showing old scroll position on new route
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
@@ -25,7 +25,6 @@ const ScrollToTop = () => {
 
   return null
 }
-
 const customAppearance = {
   theme: {
     ...ThemeSupa,
@@ -41,7 +40,6 @@ const customAppearance = {
     },
   },
 }
-
 /*
   Routing.jsx
   - Checks Supabase auth state on mount.
@@ -58,7 +56,7 @@ const Routing = ({ player }) => {
   useEffect(() => {
     // Set loading state to true while we check for an existing session
     setLoading(true)
-    
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session)
       setLoading(false)
@@ -87,9 +85,12 @@ const Routing = ({ player }) => {
     <BrowserRouter>
       <ScrollToTop />
       <Routes>
-        {/* Root route shows login when not authenticated, or redirects to /home */}
+        {/* Root always redirects to /home */}
+        <Route path="/" element={<Navigate to="/Home" replace />}/>
+      
+      {/* Authentication page */}
         <Route
-          path="/"
+          path="/authentication"
           element={
             loading ? (
               <div>Loading...</div>
@@ -131,21 +132,23 @@ const Routing = ({ player }) => {
             />
           }
         />
-        {/* Protected pages */}
+        {/* Protected pages (except profile view stays public for anonymous visitors) */}
         <Route
           path="/home"
           element={
-            <ProtectedRoute session={session} loading={loading}>
-              <Home session={session} player={player} />
-            </ProtectedRoute>
+            <Home session={session} player={player} />
           }
         />
         <Route
           path="/profile"
           element={
-            <ProtectedRoute session={session} loading={loading}>
-              <Profile session={session} player={player} />
-            </ProtectedRoute>
+            <Profile session={session} player={player} />
+          }
+        />
+        <Route
+          path="/track"
+          element={
+            <Track session={session} player={player} />
           }
         />
         <Route
@@ -159,9 +162,7 @@ const Routing = ({ player }) => {
         <Route
           path="/playlist"
           element={
-            <ProtectedRoute session={session} loading={loading}>
-              <Playlist session={session} player={player} />
-            </ProtectedRoute>
+            <Playlist session={session} player={player} />
           }
         />
         <Route path="/privacy" element={<Privacy />} />

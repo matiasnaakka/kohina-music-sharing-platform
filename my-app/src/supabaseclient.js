@@ -55,3 +55,4 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 // Export base URL for preconnect/dns-prefetch hints
 export const SUPABASE_URL = supabaseUrl
+export const SUPABASE_ANON_KEY = supabaseAnonKey

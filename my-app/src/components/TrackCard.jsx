@@ -1,4 +1,4 @@
-import { Suspense, lazy } from 'react'
+import { Suspense, lazy, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { getPublicStorageUrl } from '../supabaseclient'
 
@@ -31,6 +31,7 @@ export default function TrackCard({
   isTrackLiked,
   onToggleLike,
   likeCounts,
+  isAuthenticated = false,
 }) {
   const avatarSrc = track.profiles?.avatar_url || profileAvatar || '/images/default-avatar.png'
   const coverSrc =
@@ -60,6 +61,18 @@ export default function TrackCard({
     likeCounts && track.id != null
       ? (likeCounts instanceof Map ? likeCounts.get(track.id) : likeCounts[track.id]) || 0
       : 0
+  const [copied, setCopied] = useState(false)
+
+  const handleShare = async () => {
+    try {
+      const url = `${window.location.origin}/track?id=${track.id}`
+      await navigator.clipboard.writeText(url)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1500)
+    } catch (err) {
+      console.warn('Share copy failed', err)
+    }
+  }
 
   return (
     <div>
@@ -195,14 +208,21 @@ export default function TrackCard({
           ) : (
             <span className="text-red-400">Audio unavailable</span>
           )}
+          {isAuthenticated && (
+            <button
+              type="button"
+              onClick={() => onToggleLike(track.id)}
+              className={`px-2.5 py-1.5 rounded-lg text-sm font-semibold transition ${trackIsLiked ? 'bg-red-500 text-white hover:bg-red-400' : 'bg-gray-700 text-white hover:bg-gray-600'}`}
+            >
+              {trackIsLiked ? '❤️ Liked' : '🤍 Like'}
+            </button>
+          )}
           <button
             type="button"
-            onClick={() => onToggleLike(track.id)}
-            className={`px-2.5 py-1.5 rounded-lg text-sm font-semibold transition ${
-              trackIsLiked ? 'bg-red-500 text-white hover:bg-red-400' : 'bg-gray-700 text-white hover:bg-gray-600'
-            }`}
+            onClick={handleShare}
+            className="px-2.5 py-1.5 rounded-lg text-sm font-semibold bg-gray-700 text-white hover:bg-gray-600"
           >
-            {trackIsLiked ? '❤️ Liked' : '🤍 Like'}
+            {copied ? 'Copied!' : 'Share'}
           </button>
           <Suspense fallback={null}>
             <AddToPlaylist

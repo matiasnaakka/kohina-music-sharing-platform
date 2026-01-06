@@ -1,4 +1,4 @@
-import { supabase, SUPABASE_URL } from '../supabaseclient'
+import { supabase, SUPABASE_URL, SUPABASE_ANON_KEY } from '../supabaseclient'
 import { validateId } from './securityUtils'
 
 // Derive from configured Supabase project URL to avoid environment mismatches.
@@ -36,9 +36,11 @@ export async function incrementPlayCount(trackId) {
     console.error('[incrementPlayCount] Error retrieving session:', err)
   }
   
-  if (!token) {
-    console.error('[incrementPlayCount] Error: No access token found')
-    throw new Error('User session required to increment play count')
+  // Allow anonymous playcount increments by falling back to the anon key
+  const authToken = token || SUPABASE_ANON_KEY
+  if (!authToken) {
+    console.error('[incrementPlayCount] Error: No access token or anon key available')
+    throw new Error('Edge function credentials not available')
   }
   
   const payload = { track_id: Number(id) }
@@ -52,7 +54,8 @@ export async function incrementPlayCount(trackId) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
+        'Authorization': `Bearer ${authToken}`,
+        'apikey': SUPABASE_ANON_KEY,
       },
       body: JSON.stringify(payload),
     })

@@ -14,6 +14,7 @@ export default function TracksList({
   onToggleLike,
   emptyMessage,
   likeCounts, // optional: Map or object of trackId -> likes
+  isAuthenticated = false,
 }) {
   if (loading) return <div>Loading tracks...</div>
   if (error) return <div className="bg-red-500 bg-opacity-25 text-red-100 p-3 rounded">{error}</div>
@@ -38,6 +39,7 @@ export default function TracksList({
               isTrackLiked={isTrackLiked}
               onToggleLike={onToggleLike}
               likeCounts={likeCounts}
+              isAuthenticated={isAuthenticated}
             />
           </div>
         )

@@ -484,8 +484,10 @@ export default function Profile({ session, player }) {
 
   // Fetch liked tracks when component mounts or user changes
   useEffect(() => {
-    if (!isOwnProfile || !session?.user?.id) {
+    const userIdForLikes = isOwnProfile ? session?.user?.id : targetUserId
+    if (!userIdForLikes) {
       setLikedTracks([])
+      setLikedTracksLikeCounts(new Map())
       return
     }
 
@@ -513,7 +515,7 @@ export default function Profile({ session, player }) {
               profiles!tracks_user_id_fkey(username, avatar_url)
             )
           `)
-          .eq('user_id', session.user.id)
+          .eq('user_id', userIdForLikes)
           .order('created_at', { ascending: false })
           .limit(50)
 
@@ -525,7 +527,6 @@ export default function Profile({ session, player }) {
 
         if (isMounted) {
           setLikedTracks(mappedTracks)
-          // Fetch like state for these tracks
           if (mappedTracks.length > 0) {
             fetchLikedTracksTracks(mappedTracks.map(t => t.id))
           }
@@ -543,7 +544,7 @@ export default function Profile({ session, player }) {
 
     fetchLikedTracks()
     return () => { isMounted = false }
-  }, [isOwnProfile, session?.user?.id, fetchLikedTracksTracks])
+  }, [isOwnProfile, session?.user?.id, targetUserId, fetchLikedTracksTracks])
 
   // Compute like counts for liked tracks
   useEffect(() => {
@@ -624,6 +625,7 @@ export default function Profile({ session, player }) {
                 <ProfileHeader
                   profile={ownProfile}
                   isOwn
+                  isAuthenticated={!!session}
                   followerCount={ownFollowerCount}
                   followingCount={ownFollowingCount}
                   onFollowersClick={() => openFollowModal('followers', session?.user?.id)}
@@ -647,6 +649,7 @@ export default function Profile({ session, player }) {
                       isTrackLiked={isOwnTrackLiked}
                       onToggleLike={toggleOwnTrackLike}
                       likeCounts={ownLikeCounts}
+                      isAuthenticated={!!session?.user?.id}
                       emptyMessage="You haven't uploaded any tracks yet."
                     />
                   </div>
@@ -666,6 +669,7 @@ export default function Profile({ session, player }) {
                       isTrackLiked={isLikedTrackLiked}
                       onToggleLike={toggleLikedTrackLike}
                       likeCounts={likedTracksLikeCounts}
+                      isAuthenticated={!!session?.user?.id}
                     />
                   </div>
                 </div>
@@ -677,16 +681,6 @@ export default function Profile({ session, player }) {
             open={showSettings}
             session={session}
             onClose={() => setShowSettings(false)}
-          />
-
-          <FollowModal
-            open={followModal.open}
-            type={followModal.type}
-            loading={followModalLoading}
-            error={followModalError}
-            users={followModalUsers}
-            onClose={closeFollowModal}
-            onSelectUser={handleProfileSelect}
           />
         </>
       ) : (
@@ -702,6 +696,7 @@ export default function Profile({ session, player }) {
               <ProfileHeader
                 profile={publicProfile}
                 isOwn={false}
+                isAuthenticated={!!session}
                 followerCount={followerCount}
                 followingCount={publicFollowingCount}
                 onFollowersClick={() => openFollowModal('followers', targetUserId)}
@@ -727,7 +722,8 @@ export default function Profile({ session, player }) {
                     onToggleComments={(id) => setExpandedComments(id === expandedComments ? null : id)}
                     isTrackLiked={isPublicTrackLiked}
                     onToggleLike={togglePublicTrackLike}
-                      likeCounts={publicLikeCounts}
+                    likeCounts={publicLikeCounts}
+                    isAuthenticated={!!session?.user?.id}
                     emptyMessage="No public tracks yet."
                   />
                 </div>
@@ -746,6 +742,8 @@ export default function Profile({ session, player }) {
                     session={session}
                     isTrackLiked={isLikedTrackLiked}
                     onToggleLike={toggleLikedTrackLike}
+                    likeCounts={likedTracksLikeCounts}
+                    isAuthenticated={!!session?.user?.id}
                   />
                 </div>
               </div>
@@ -753,6 +751,16 @@ export default function Profile({ session, player }) {
           )}
         </div>
       )}
+
+      <FollowModal
+        open={followModal.open}
+        type={followModal.type}
+        loading={followModalLoading}
+        error={followModalError}
+        users={followModalUsers}
+        onClose={closeFollowModal}
+        onSelectUser={handleProfileSelect}
+      />
     </div>
   )
 }

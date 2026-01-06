@@ -8,6 +8,7 @@ const TrackComments = lazy(() => import('../components/TrackComments'))
 import { useLikesV2 } from '../hooks/useLikesV2'
 
 export default function Home({ session, player }) {
+  const isAuthenticated = !!session?.user?.id
   const [tracks, setTracks] = useState([])
   const [filteredTracks, setFilteredTracks] = useState([])
   const [genres, setGenres] = useState([])
@@ -258,48 +259,52 @@ export default function Home({ session, player }) {
     <div className="min-h-screen bg-black text-white">
       <NavBar session={session} onSignOut={handleSignOut} />
       <div className="max-w-5xl mx-auto mt-16 p-6 pb-32 md:pb-6">
-        <h1 className="text-2xl sm:text-3xl font-bold mb-6 text-white">Nice to see you, {displayName}!</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold mb-6 text-white">
+          {isAuthenticated ? `Nice to see you, ${displayName}!` : 'Nice to see you here!'}
+        </h1>
 
-        <section className="mb-8">
-          <h2 className="sm:text-xl text-lg font-semibold mb-3 text-white">Your playlists</h2>
-          {ownPlaylistsLoading ? (
-            <div className="text-sm text-gray-400 bg-gray-800 px-3 py-2 rounded">Loading playlists...</div>
-          ) : ownPlaylistsError ? (
-            <div className="text-sm text-red-400 bg-red-500/20 px-3 py-2 rounded">{ownPlaylistsError}</div>
-          ) : ownPlaylists.length === 0 ? (
-            <div className="text-sm text-gray-400 bg-gray-800 px-3 py-2 rounded">Create a playlist to see it here.</div>
-          ) : (
-            <ul className="grid gap-3 grid-cols-2 md:grid-cols-4">
-              {ownPlaylists.map((playlist) => (
-                <li key={playlist.id}>
-                  <Link
-                    to={`/playlist?id=${playlist.id}`}
-                    className="block bg-gray-800 hover:bg-gray-700 px-3 py-2 rounded transition min-h-16"
-                  >
-                    <div className="flex items-center gap-3">
-                      <img
-                        src={playlistCovers.get(playlist.id) || '/images/c-casette.png'}
-                        alt={`${playlist.title} cover`}
-                        className="w-12 h-12 rounded object-cover border border-gray-700"
-                        width="48"
-                        height="48"
-                        decoding="async"
-                        loading="lazy"
-                        onError={(e) => {
-                          e.target.src = '/images/c-casette.png'
-                        }}
-                      />
-                      <div className="min-w-0">
-                        <p className="text-white font-semibold truncate">{playlist.title}</p>
-                        <p className="text-xs text-gray-500 mt-1">{playlist.is_public ? 'Public' : 'Private'}</p>
+        {isAuthenticated && (
+          <section className="mb-8">
+            <h2 className="sm:text-xl text-lg font-semibold mb-3 text-white">Your playlists</h2>
+            {ownPlaylistsLoading ? (
+              <div className="text-sm text-gray-400 bg-gray-800 px-3 py-2 rounded">Loading playlists...</div>
+            ) : ownPlaylistsError ? (
+              <div className="text-sm text-red-400 bg-red-500/20 px-3 py-2 rounded">{ownPlaylistsError}</div>
+            ) : ownPlaylists.length === 0 ? (
+              <div className="text-sm text-gray-400 bg-gray-800 px-3 py-2 rounded">Create a playlist to see it here.</div>
+            ) : (
+              <ul className="grid gap-3 grid-cols-2 md:grid-cols-4">
+                {ownPlaylists.map((playlist) => (
+                  <li key={playlist.id}>
+                    <Link
+                      to={`/playlist?id=${playlist.id}`}
+                      className="block bg-gray-800 hover:bg-gray-700 px-3 py-2 rounded transition min-h-16"
+                    >
+                      <div className="flex items-center gap-3">
+                        <img
+                          src={playlistCovers.get(playlist.id) || '/images/c-casette.png'}
+                          alt={`${playlist.title} cover`}
+                          className="w-12 h-12 rounded object-cover border border-gray-700"
+                          width="48"
+                          height="48"
+                          decoding="async"
+                          loading="lazy"
+                          onError={(e) => {
+                            e.target.src = '/images/c-casette.png'
+                          }}
+                        />
+                        <div className="min-w-0">
+                          <p className="text-white font-semibold truncate">{playlist.title}</p>
+                          <p className="text-xs text-gray-500 mt-1">{playlist.is_public ? 'Public' : 'Private'}</p>
+                        </div>
                       </div>
-                    </div>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        )}
 
         <div className="mb-6">
           <h2 className="text-xl font-bold mb-3 text-white">Filter by Genre</h2>
@@ -430,6 +435,7 @@ export default function Home({ session, player }) {
             isTrackLiked={isLiked}
             onToggleLike={toggleLike}
             likeCounts={likeCounts}
+            isAuthenticated={!!session?.user?.id}
             emptyMessage={selectedGenreIds.length > 0
               ? 'No tracks found for the selected genres. Try selecting different genres.'
               : 'No tracks available yet.'}
