@@ -1,6 +1,8 @@
 // LoginLayout
 // - Provides a full-screen background and overlay used by the authentication page.
 
+import { Link } from "react-router-dom"
+
 const LoginLayout = ({ children }) => (
   <div
     className="relative min-h-screen w-full flex items-center justify-center px-4 sm:px-6 lg:px-8"
@@ -13,9 +15,9 @@ const LoginLayout = ({ children }) => (
     }}
   >
     {/* Logo / App name in top-left */}
-    <h1 className="absolute top-4 left-4 z-20 text-white font-['Lalezar'] text-3xl">
+    <Link to="/" className="absolute top-4 left-4 z-20 text-white font-['Lalezar'] text-3xl">
       Kohina
-    </h1>
+    </Link>
     {/* Dark overlay (let clicks pass through) */}
     <div className="absolute inset-0 bg-black opacity-75 pointer-events-none" />
     {/* Main content */}

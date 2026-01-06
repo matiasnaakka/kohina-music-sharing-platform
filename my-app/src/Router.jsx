@@ -25,6 +25,18 @@ const ScrollToTop = () => {
 
   return null
 }
+
+// Stop playback when entering auth flow
+const PauseOnAuth = ({ player }) => {
+  const { pathname } = useLocation()
+  const stop = player?.stop
+  useEffect(() => {
+    if (pathname?.toLowerCase() === '/authentication') {
+      stop?.()
+    }
+  }, [pathname, stop])
+  return null
+}
 const customAppearance = {
   theme: {
     ...ThemeSupa,
@@ -84,6 +96,7 @@ const Routing = ({ player }) => {
 
     <BrowserRouter>
       <ScrollToTop />
+      <PauseOnAuth player={player} />
       <Routes>
         {/* Root always redirects to /home */}
         <Route path="/" element={<Navigate to="/Home" replace />}/>
