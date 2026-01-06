@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import NavBar from '../components/NavBar'
 import TracksList from '../components/TracksList'
 import { supabase, getPublicStorageUrl } from '../supabaseclient'
+import { useLikesV2 } from '../hooks/useLikesV2'
 
 // Lightweight single-track page for shared links
 export default function Track({ session, player }) {
@@ -17,6 +18,7 @@ export default function Track({ session, player }) {
   const [expandedComments, setExpandedComments] = useState(null)
   const [likeCounts, setLikeCounts] = useState(new Map())
   const [likeLoading, setLikeLoading] = useState(false)
+  const { isLiked, toggleLike, fetchLikedTracks } = useLikesV2(session?.user?.id)
 
   const fetchTrack = useCallback(async () => {
     if (!trackIdParam) {
@@ -60,6 +62,12 @@ export default function Track({ session, player }) {
     fetchTrack()
   }, [fetchTrack])
 
+  // Load liked state for this single track
+  useEffect(() => {
+    if (!track?.id || !session?.user?.id) return
+    fetchLikedTracks([track.id])
+  }, [track?.id, session?.user?.id, fetchLikedTracks])
+
   // Load like count for the single track
   useEffect(() => {
     const loadLikes = async () => {
@@ -99,6 +107,19 @@ export default function Track({ session, player }) {
     if (!track || !player) return
     player.playTrack(track, [track])
   }, [track, player])
+
+  const handleToggleLike = useCallback(async () => {
+    if (!track?.id || !session?.user?.id) return
+    const wasLiked = isLiked(track.id)
+    const ok = await toggleLike(track.id)
+    if (!ok) return
+    setLikeCounts((prev) => {
+      const next = new Map(prev)
+      const current = next.get(track.id) || 0
+      next.set(track.id, wasLiked ? Math.max(0, current - 1) : current + 1)
+      return next
+    })
+  }, [track?.id, session?.user?.id, isLiked, toggleLike])
 
   const cover = track?.image_path ? getPublicStorageUrl('track-images', track.image_path) : null
   const canPlay = Boolean(track?.audio_path)
@@ -156,8 +177,8 @@ export default function Track({ session, player }) {
               isOwn={session?.user?.id === track.user_id}
               expandedComments={expandedComments}
               onToggleComments={(id) => setExpandedComments(expandedComments === id ? null : id)}
-              isTrackLiked={() => false}
-              onToggleLike={() => {}}
+              isTrackLiked={isLiked}
+              onToggleLike={handleToggleLike}
               likeCounts={likeCounts}
               isAuthenticated={!!session?.user?.id}
               emptyMessage=""
