@@ -16,6 +16,7 @@ const NavBar = ({ session, onSignOut }) => {
     }
   })
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [showAbout, setShowAbout] = useState(false)
 
   useEffect(() => {
     if (!session?.user?.id) {
@@ -221,6 +222,13 @@ const NavBar = ({ session, onSignOut }) => {
             <Link to="/authentication" className="text-white hover:underline text-sm md:text-base">
               Login/Register
             </Link>
+            <button
+              type="button"
+              onClick={() => setShowAbout(true)}
+              className="text-white hover:underline text-sm md:text-base"
+            >
+              What is Kohina?
+            </button>
           </div>
 
           {/* Mobile Menu Button - Anonymous */}
@@ -245,10 +253,47 @@ const NavBar = ({ session, onSignOut }) => {
                 >
                   Login/Register
                 </Link>
+                <button
+                  type="button"
+                  onClick={() => { setShowAbout(true); closeMobileMenu() }}
+                  className="text-white hover:text-teal-300 text-base font-medium text-left"
+                >
+                  What is Kohina?
+                </button>
               </div>
             </div>
           )}
         </>
+      )}
+
+      {showAbout && (
+        <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4" onMouseDown={(e) => { if (e.target === e.currentTarget) setShowAbout(false) }}>
+          <div className="bg-gray-900 border border-gray-800 rounded-lg max-w-lg w-full p-5 space-y-3">
+            <div className="flex items-start justify-between gap-4">
+              <h3 className="text-xl font-semibold text-white">What is Kohina?</h3>
+              <button type="button" onClick={() => setShowAbout(false)} className="text-gray-300 hover:text-white" aria-label="Close">✕</button>
+            </div>
+            <p className="text-gray-200 text-sm leading-relaxed">
+              Kohina is a community-driven music sharing platform. Upload your tracks, build playlists, follow other artists, and listen together—no account needed to browse and play public music. Sign in to like, comment, and follow.
+            </p>
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setShowAbout(false)}
+                className="px-4 py-2 rounded bg-gray-800 text-white hover:bg-gray-700 text-sm font-semibold"
+              >
+                Close
+              </button>
+              <Link
+                to="/authentication"
+                onClick={() => setShowAbout(false)}
+                className="px-4 py-2 rounded bg-teal-500 text-black hover:bg-teal-400 text-sm font-semibold"
+              >
+                Get started
+              </Link>
+            </div>
+          </div>
+        </div>
       )}
     </nav>
   )
