@@ -784,7 +784,7 @@ const GlobalAudioPlayer = ({
             <button
               type="button"
               onClick={withStop(handlePrevClick)}
-              className="px-2 py-1 text-sm text-gray-200 hover:bg-gray-800"
+              className="hidden sm:inline-flex px-2 py-1 text-sm text-gray-200 hover:bg-gray-800"
               disabled={!canNavigate || loading}
               aria-label="Previous track"
             >
@@ -806,7 +806,7 @@ const GlobalAudioPlayer = ({
             <button
               type="button"
               onClick={withStop(onNext)}
-              className="px-2 py-1 text-sm text-gray-200 hover:bg-gray-800"
+              className="hidden sm:inline-flex px-2 py-1 text-sm text-gray-200 hover:bg-gray-800"
               disabled={!canNavigate || loading}
               aria-label="Next track"
             >
