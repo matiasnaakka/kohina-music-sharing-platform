@@ -307,7 +307,7 @@ export default function Home({ session, player }) {
         )}
 
         <div className="mb-6">
-          <h2 className="text-xl font-bold mb-3 text-white">Filter by Genre</h2>
+          <h2 className="text-xl font-bold mb-3 text-white">Filter music by genre</h2>
           <div
             className="relative inline-block"
             onMouseEnter={() => setShowGenres(true)}

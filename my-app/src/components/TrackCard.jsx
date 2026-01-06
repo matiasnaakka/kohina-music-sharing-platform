@@ -222,7 +222,7 @@ export default function TrackCard({
             onClick={handleShare}
             className="px-2.5 py-1.5 rounded-lg text-sm font-semibold bg-gray-700 text-white hover:bg-gray-600"
           >
-            {copied ? 'Copied!' : 'Share'}
+            {copied ? 'Link copied!' : 'Share this track'}
           </button>
           <Suspense fallback={null}>
             <AddToPlaylist
