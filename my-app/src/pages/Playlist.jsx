@@ -184,7 +184,7 @@ export default function Playlist({ session, player }) {
   return (
     <div className="min-h-screen bg-black text-white">
       <NavBar session={session} onSignOut={handleSignOut} />
-      <div className="max-w-4xl mx-auto mt-16 p-6 bg-black bg-opacity-80 rounded-lg">
+      <div className="max-w-4xl mx-auto mt-16 p-6 bg-black bg-opacity-80 rounded-lg pb-40">
         <div className="mb-6">
           <h1 className="text-3xl font-bold mb-2">{playlist?.title}</h1>
           {playlist?.description && <p className="text-gray-300 mb-2">{playlist.description}</p>}

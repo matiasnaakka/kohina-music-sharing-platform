@@ -613,7 +613,7 @@ export default function Profile({ session, player }) {
       <NavBar session={session} onSignOut={handleSignOut} />
       {isOwnProfile ? (
         <>
-          <div className="max-w-5xl mx-auto mt-16 p-6 bg-black bg-opacity-80 rounded-lg text-white pb-32 md:pb-6">
+          <div className="max-w-5xl mx-auto mt-16 p-6 bg-black bg-opacity-80 rounded-lg text-white pb-40">
             {ownHeaderLoading ? (
               <div>Loading profile...</div>
             ) : ownHeaderError ? (
@@ -684,7 +684,7 @@ export default function Profile({ session, player }) {
           />
         </>
       ) : (
-        <div className="max-w-5xl mx-auto mt-16 p-6 bg-black bg-opacity-80 rounded-lg text-white pb-32 md:pb-6">
+        <div className="max-w-5xl mx-auto mt-16 p-6 bg-black bg-opacity-80 rounded-lg text-white pb-40">
           {publicLoading ? (
             <div>Loading profile...</div>
           ) : publicError ? (

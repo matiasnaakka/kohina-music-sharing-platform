@@ -258,7 +258,7 @@ export default function Home({ session, player }) {
   return (
     <div className="min-h-screen bg-black text-white">
       <NavBar session={session} onSignOut={handleSignOut} />
-      <div className="max-w-5xl mx-auto mt-16 p-6 pb-32 md:pb-6">
+      <div className="max-w-5xl mx-auto mt-16 p-6 pb-40">
         <h1 className="text-2xl sm:text-3xl font-bold mb-6 text-white">
           {isAuthenticated ? `Nice to see you, ${displayName}!` : 'Nice to see you here!'}
         </h1>
