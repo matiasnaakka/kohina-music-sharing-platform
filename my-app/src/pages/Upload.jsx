@@ -211,7 +211,11 @@ export default function Upload({ session, player }) {
       const next = { ...prev }
       tracks.forEach((t) => {
         if (!next[t.id]) {
-          next[t.id] = { title: t.title || '', description: t.description || '' }
+          next[t.id] = { 
+            title: t.title || '', 
+            description: t.description || '',
+            genre_id: t.genre_id || null
+          }
         }
       })
       return next
@@ -590,12 +594,17 @@ export default function Upload({ session, player }) {
     setSuccess(null)
     try {
       const description = draft.description?.trim() || ''
+      const updateData = {
+        title: draft.title.trim(),
+        description,
+      }
+      // Include genre_id if it was changed
+      if (draft.genre_id !== undefined) {
+        updateData.genre_id = draft.genre_id
+      }
       const { error: updateError } = await supabase
         .from('tracks')
-        .update({
-          title: draft.title.trim(),
-          description,
-        })
+        .update(updateData)
         .eq('id', trackId)
         .eq('user_id', session.user.id)
       if (updateError) throw new Error(updateError.message)
@@ -754,7 +763,7 @@ export default function Upload({ session, player }) {
                   player.playTrack(track, tracks)
                 }
               }
-              const metaDraft = editingMetadata[track.id] || { title: track.title || '', description: track.description || '' }
+              const metaDraft = editingMetadata[track.id] || { title: track.title || '', description: track.description || '', genre_id: track.genre_id || null }
               return (
                 <div key={track.id} className="bg-gray-800 p-4 rounded flex flex-col md:flex-row gap-4">
                   <img
@@ -780,6 +789,21 @@ export default function Upload({ session, player }) {
                         placeholder="Description"
                         rows={2}
                       />
+                      <div className="mt-2">
+                        <label className="block text-sm text-gray-300 mb-1">Genre</label>
+                        <select
+                          value={metaDraft.genre_id || ''}
+                          onChange={(e) => handleMetadataChange(track.id, 'genre_id', e.target.value ? parseInt(e.target.value) : null)}
+                          className="w-full p-2 rounded bg-gray-700 text-white text-sm"
+                        >
+                          <option value="">Select a genre</option>
+                          {genres.map((genre) => (
+                            <option key={genre.id} value={genre.id}>
+                              {genre.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
                       <button
                         type="button"
                         onClick={() => handleSaveMetadata(track.id)}
