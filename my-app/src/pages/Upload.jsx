@@ -698,6 +698,7 @@ export default function Upload({ session, player }) {
               className="w-full p-2 rounded bg-gray-800 text-white"
               required
             />
+            <p>Accepted formats: mpeg, wav, x-wav, aac, ogg, flac. Take a note larger file formats like FLAC or Wav may take longer to upload.</p>
           </div>
 
           <div className="mb-4">
