@@ -510,7 +510,7 @@ const UserProfile = ({ session, isModal = false, onClose, readOnly = false }) =>
           {/* Delete profile action */}
           <div className="pt-2 border-t border-gray-800 mt-2">
             <p className="text-xs text-gray-400 mb-2">
-              Delete your account. It will be marked for deletion now and permanently removed after 30 days.
+              Delete your account. This action is irreversible and will remove all your data.
             </p>
             <button
               type="button"
