@@ -20,11 +20,31 @@ export default function Privacy() {
             content public. You can delete content you own, and you may request account deletion at any time.
           </p>
           <p>
-            We use cookies/local storage for authentication sessions and basic preferences (e.g., volume). Third-party
-            logins follow the respective provider&apos;s terms.
+            We use cookies/local storage for authentication sessions and basic preferences (e.g., volume). Third-party authentication providers, such as Google, are used in accordance with this Privacy Policy and the provider’s terms.
           </p>
           <p>
             For questions or requests (access, correction, deletion), contact us at <a href="mailto:matias5230@gmail.com" className="text-teal-300 underline">matias5230@gmail.com</a>.
+          </p>
+        </section>
+
+        <section className="space-y-3 text-gray-200 leading-relaxed">
+          <h2 className="text-xl font-semibold text-white">Google Authentication</h2>
+          <p>
+            Kohina allows users to authenticate using Google Sign-In. When you choose this option, we receive limited
+            information from Google, including your primary email address, display name, and profile image. This
+            information is used solely to authenticate your account and associate it with a Kohina user profile. We do
+            not access your Google password or any other Google services.
+          </p>
+          <h2 className="text-xl font-semibold text-white">Data Processing and Storage</h2>
+          <p>
+            Authentication data and account information obtained through Google Sign-In is processed and stored using
+            Supabase, which acts as our authentication and database service provider. Supabase processes this data on
+            our behalf and in accordance with our instructions to operate and secure the Kohina service.
+          </p>
+          <h2 className="text-xl font-semibold text-white">Data Sharing</h2>
+          <p>
+            We do not sell or share Google user data with third parties. Access to this data is limited to Kohina and
+            our service providers strictly for the purpose of operating the application.
           </p>
         </section>
 

@@ -834,7 +834,7 @@ export default function Upload({ session, player }) {
                               {playbackLabel}
                             </button>
                             {isActive && player?.error && !player.loading && (
-                              <span className="max-w-[140px] truncate text-xs text-red-400">
+                              <span className="max-w-35 truncate text-xs text-red-400">
                                 {player.error}
                               </span>
                             )}

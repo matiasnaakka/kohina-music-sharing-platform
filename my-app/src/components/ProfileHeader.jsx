@@ -22,7 +22,7 @@ export default function ProfileHeader({
 
   return (
     <div
-      className="flex flex-col gap-3 mb-6 p-4 rounded-lg bg-gray-900/60 bg-cover bg-center min-h-[180px]"
+      className="flex flex-col gap-3 mb-6 p-4 rounded-lg bg-gray-900/60 bg-cover bg-center min-h-45"
       style={headerStyle}
     >
       {/* Top row: avatar + button on the right */}
