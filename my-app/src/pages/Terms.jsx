@@ -25,7 +25,7 @@ export default function Terms() {
         </section>
 
         <div className="flex gap-4 text-sm">
-          <Link to="/" className="text-teal-300 hover:underline">Back to login</Link>
+          <Link to="/authentication" className="text-teal-300 hover:underline">Back to login</Link>
           <Link to="/privacy" className="text-gray-300 hover:underline">Privacy Policy</Link>
         </div>
       </div>

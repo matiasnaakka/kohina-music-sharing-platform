@@ -120,13 +120,15 @@ const Routing = ({ player }) => {
                     redirectTo={redirectToHome}
                   />
                   <div className="text-center text-sm text-gray-300">
-                    <Link to="/privacy" className="hover:text-teal-300 underline">
-                      Privacy Policy
-                    </Link>
-                    <span className="mx-2 text-gray-500">•</span>
+                    By signing in, you agree to our{' '}
                     <Link to="/terms" className="hover:text-teal-300 underline">
                       Terms of Service
                     </Link>
+                    <span className="mx-1 text-gray-500">and</span>
+                    <Link to="/privacy" className="hover:text-teal-300 underline">
+                      Privacy Policy
+                    </Link>
+                    .
                   </div>
                 </div>
               </LoginLayout>
