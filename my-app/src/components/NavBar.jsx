@@ -97,14 +97,14 @@ const NavBar = ({ session, onSignOut }) => {
             <Link to="/home" className="text-white hover:underline text-sm md:text-base">
               Home
             </Link>
-            <Link to="/profile" className="text-white hover:underline text-sm md:text-base">
+            <Link to={`/profile?user=${session.user.id}`} className="text-white hover:underline text-sm md:text-base">
               Profile
             </Link>
             <Link to="/upload" className="text-white hover:underline text-sm md:text-base">
               Upload
             </Link>
             <Link
-              to="/profile"
+              to={`/profile?user=${session.user.id}`}
               className="inline-block"
               aria-label="View your profile"
             >
@@ -132,7 +132,7 @@ const NavBar = ({ session, onSignOut }) => {
           {/* Mobile Menu Button - Authenticated */}
           <div className="sm:hidden flex items-center gap-3">
             <Link
-              to="/profile"
+              to={`/profile?user=${session.user.id}`}
               aria-label="View your profile"
             >
               <img
@@ -169,7 +169,7 @@ const NavBar = ({ session, onSignOut }) => {
                   Home
                 </Link>
                 <Link
-                  to="/profile"
+                  to={`/profile?user=${session.user.id}`}
                   onClick={closeMobileMenu}
                   className="text-white hover:text-teal-300 text-base font-medium"
                 >
