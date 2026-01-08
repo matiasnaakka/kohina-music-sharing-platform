@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseclient'
 import imageCompression from 'browser-image-compression'
-import PasswordResetRequest from './PasswordResetRequest'
 
 const UserProfile = ({ session, isModal = false, onClose, readOnly = false }) => {
   const [profile, setProfile] = useState({
@@ -20,7 +19,6 @@ const UserProfile = ({ session, isModal = false, onClose, readOnly = false }) =>
   const [deleting, setDeleting] = useState(false)
   const [followingCount, setFollowingCount] = useState(0)
   const [followerCount, setFollowerCount] = useState(0)
-  const [showPasswordReset, setShowPasswordReset] = useState(false)
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -397,10 +395,7 @@ const UserProfile = ({ session, isModal = false, onClose, readOnly = false }) =>
         Following {followingCount} • Followers {followerCount}
       </p>
 
-      {showPasswordReset ? (
-        <PasswordResetRequest onClose={() => setShowPasswordReset(false)} />
-      ) : (
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           {/* Background uploader */}
           <div className="flex flex-col gap-2">
             <div
@@ -493,20 +488,6 @@ const UserProfile = ({ session, isModal = false, onClose, readOnly = false }) =>
             </div>
           )}
 
-          {/* Password reset section */}
-          <div className="pt-2 border-t border-gray-800 mt-2">
-            <p className="text-xs text-gray-400 mb-2">
-              Reset your account password. We'll send a confirmation link to your email.
-            </p>
-            <button
-              type="button"
-              onClick={() => setShowPasswordReset(true)}
-              className="bg-blue-600 text-white px-4 py-2 rounded font-semibold hover:bg-blue-500 w-full mb-2"
-            >
-              Change Password
-            </button>
-          </div>
-
           {/* Delete profile action */}
           <div className="pt-2 border-t border-gray-800 mt-2">
             <p className="text-xs text-gray-400 mb-2">
@@ -521,8 +502,7 @@ const UserProfile = ({ session, isModal = false, onClose, readOnly = false }) =>
               {deleting ? 'Deleting…' : 'Delete Profile'}
             </button>
           </div>
-        </form>
-      )}
+      </form>
     </div>
   )
 }

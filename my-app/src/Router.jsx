@@ -9,7 +9,6 @@ import ProtectedRoute from './components/protectedRoutes'
 import LoginLayout from './components/LoginLayout'
 import Profile from './pages/Profile'
 import Upload from './pages/Upload'
-import PasswordResetForm from './components/PasswordResetForm'
 import Playlist from './pages/Playlist'
 import Privacy from './pages/Privacy'
 import Terms from './pages/Terms'
@@ -133,18 +132,6 @@ const Routing = ({ player }) => {
                 </div>
               </LoginLayout>
             )
-          }
-        />
-        {/* Password reset route - handles callback from email link */}
-        <Route
-          path="/reset-password"
-          element={
-            <PasswordResetForm
-              // Avoid full reload; stay within HashRouter
-              onResetComplete={() => {
-                window.location.replace('/home')
-              }}
-            />
           }
         />
         {/* Protected pages (except profile view stays public for anonymous visitors) */}
