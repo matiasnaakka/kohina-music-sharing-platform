@@ -21,11 +21,11 @@ React + Supabase music sharing app. Live at https://kohinasound.com/. Users uplo
  - Contributing and contact
 
  ## What it does
- - Auth (Supabase email + Google), protected routes, password reset.
+ - Auth (Supabase email + Google with magic link support), protected routes, profile-based navigation.
  - Upload audio, compress/validate client-side, attach cover images, and store privately via signed URLs.
  - Global audio player with play/pause/seek/next/previous, queue navigation, fullscreen view, and visualizer.
- - Social actions: like/unlike with optimistic updates, comments with rate limiting, follow creators, playlists and “add to playlist.”
- - Profile pages with avatar, bio, settings, and GDPR export panel.
+ - Social actions: like/unlike with optimistic updates, comments with rate limiting, follow creators, playlists and "add to playlist."
+ - Profile pages with avatar, bio, background, settings, and GDPR export panel for data portability.
 
  ## Architecture map
  - Routing and auth: [my-app/src/Router.jsx](my-app/src/Router.jsx) manages Supabase session, protected routes, login layout, privacy/terms pages.
@@ -58,8 +58,8 @@ React + Supabase music sharing app. Live at https://kohinasound.com/. Users uplo
  - (Optional) VITE_SUPABASE_SERVICE_KEY — service_role for server-side or local admin tasks only (do not ship to clients)
 
  ## Supabase schema (recommended)
- - profiles: id (uuid, pk, matches auth.user.id), username, bio, location, avatar_url, updated_at.
- - tracks: id (uuid), user_id (uuid fk profiles), title, artist, album, audio_path, image_path, mime_type, file_size, genre_id, is_public, created_at/updated_at/deleted_at.
+ - profiles: id (uuid, pk, matches auth.user.id), username, bio, location, avatar_url, background_url, updated_at.
+ - tracks: id (uuid), user_id (uuid fk profiles), title, artist, album, audio_path, image_path, mime_type, file_size, genre_id, is_public, play_count, created_at/updated_at/deleted_at.
  - genres: id (int), name, description.
  - playlists: id (uuid), owner (uuid), title, description, is_public, updated_at.
  - playlist_tracks: id (uuid), playlist_id (uuid), track_id (uuid), position, added_by (uuid).
@@ -71,9 +71,10 @@ React + Supabase music sharing app. Live at https://kohinasound.com/. Users uplo
  - audio (private): audio files served via signed URLs (default TTL 3600s in client code).
  - track-images (public): cover art; append cache-busting query param after updates.
  - avatars (public): user avatars.
+ - backgrounds (public): profile background images.
 
  ## Key flows
- - Authentication: Supabase auth state is read in [my-app/src/Router.jsx](my-app/src/Router.jsx); unauthenticated users see the Supabase Auth UI and are redirected to /home after login.
+ - Authentication: Supabase auth state is read in [my-app/src/Router.jsx](my-app/src/Router.jsx); unauthenticated users see the Supabase Auth UI (email/password and Google Sign-In) and are redirected to /home after login. Magic link authentication is supported for password recovery. Profile links include user ID query parameters (e.g., /profile?user={userId}) to maintain context across sessions.
  - Playback: [my-app/src/App.jsx](my-app/src/App.jsx) builds a player API (play/pause/resume/stop/next/previous, queue length) and fetches signed URLs for private audio before playback.
  - Play count: [my-app/src/utils/incrementPlayCount.js](my-app/src/utils/incrementPlayCount.js) calls the Edge Function `functions/v1/increase-playcount` with the user access token; [my-app/src/hooks/useIncrementPlayCount.js](my-app/src/hooks/useIncrementPlayCount.js) wraps it for React.
  - Likes: [my-app/src/hooks/useLikesV2.js](my-app/src/hooks/useLikesV2.js) provides optimistic like/unlike with rate limiting (2s) and duplicate-request protection using `track_likes`.
