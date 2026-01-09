@@ -400,7 +400,7 @@ const App = () => {
     }
   }, [])
 
-  // Responsive sizing for the profile settings modal
+  // Responsive sizing for the profile settings modal and centered progress line
   useEffect(() => {
     const style = document.createElement('style')
     style.id = 'profile-settings-modal-responsive'
@@ -424,6 +424,14 @@ const App = () => {
       .profile-settings-modal img {
         max-width: 160px;
         height: auto;
+      }
+      .centered-progress-line {
+        display: none;
+      }
+      @media (min-width: 850px) {
+        .centered-progress-line {
+          display: block;
+        }
       }
       @media (max-width: 480px) {
         .profile-settings-modal {
@@ -758,7 +766,7 @@ const GlobalAudioPlayer = ({
           </div>
 
           {/* Centered progress line, absolutely positioned */}
-          <div className="pointer-events-none hidden sm:block absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-sm px-10">
+          <div className="pointer-events-none centered-progress-line absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-sm px-10">
             <div className="flex flex-col items-center gap-1">
               <div
                 className="relative w-full h-2 cursor-pointer"
