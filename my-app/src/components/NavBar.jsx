@@ -103,6 +103,15 @@ const NavBar = ({ session, onSignOut }) => {
             <Link to="/upload" className="text-white hover:underline text-sm md:text-base">
               Upload
             </Link>
+            <span className="flex items-center gap-2">
+              <Link to="/terms" className="text-gray-300 underline hover:text-teal-300 text-sm md:text-base">
+                Terms
+              </Link>
+              <span className="text-gray-500">/</span>
+              <Link to="/privacy" className="text-gray-300 underline hover:text-teal-300 text-sm md:text-base">
+                Privacy
+              </Link>
+            </span>
             <Link
               to={`/profile?user=${session.user.id}`}
               className="inline-block"
@@ -182,6 +191,20 @@ const NavBar = ({ session, onSignOut }) => {
                 >
                   Manage uploads
                 </Link>
+                <Link
+                  to="/terms"
+                  onClick={closeMobileMenu}
+                  className="text-white underline hover:text-teal-300 text-base font-medium"
+                >
+                  Terms
+                </Link>
+                <Link
+                  to="/privacy"
+                  onClick={closeMobileMenu}
+                  className="text-white underline hover:text-teal-300 text-base font-medium"
+                >
+                  Privacy
+                </Link>
                 <button
                   onClick={handleSignOutClick}
                   className="bg-green-500 text-black px-4 py-2 rounded text-base font-medium hover:bg-green-400 w-full"
@@ -229,6 +252,15 @@ const NavBar = ({ session, onSignOut }) => {
             >
               What is Kohina?
             </button>
+            <span className="flex items-center gap-2">
+              <Link to="/terms" className="text-gray-300 underline hover:text-teal-300 text-sm md:text-base">
+                Terms
+              </Link>
+              <span className="text-gray-500">/</span>
+              <Link to="/privacy" className="text-gray-300 underline hover:text-teal-300 text-sm md:text-base">
+                Privacy
+              </Link>
+            </span>
           </div>
 
           {/* Mobile Menu Button - Anonymous */}
@@ -260,6 +292,20 @@ const NavBar = ({ session, onSignOut }) => {
                 >
                   What is Kohina?
                 </button>
+                <Link
+                  to="/terms"
+                  onClick={closeMobileMenu}
+                  className="text-white hover:text-teal-300 text-base font-medium"
+                >
+                  Terms
+                </Link>
+                <Link
+                  to="/privacy"
+                  onClick={closeMobileMenu}
+                  className="text-white hover:text-teal-300 text-base font-medium"
+                >
+                  Privacy
+                </Link>
               </div>
             </div>
           )}
