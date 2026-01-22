@@ -308,13 +308,11 @@ export default function Home({ session, player }) {
 
         <div className="mb-6">
           <h2 className="text-xl font-bold mb-3 text-white">Filter music by genre</h2>
-          <div
-            className="relative inline-block"
-            onMouseEnter={() => setShowGenres(true)}
-            onMouseLeave={() => setShowGenres(false)}
-          >
+          <div className="relative inline-block">
             <button
               type="button"
+              onClick={() => setShowGenres(true)}
+              aria-expanded={showGenres}
               className="px-3 py-1 rounded text-sm bg-gray-700 text-white hover:bg-gray-600"
             >
               Filter{selectedGenreIds.length > 0 ? ` (${selectedGenreIds.length})` : ''}
@@ -324,13 +322,22 @@ export default function Home({ session, player }) {
               <div className="absolute z-20 mt-2 w-64 rounded bg-gray-900 border border-gray-700 shadow-lg">
                 <div className="flex items-center justify-between px-3 py-2 border-b border-gray-700">
                   <span className="text-sm text-gray-300">Select genres</span>
-                  <button
-                    type="button"
-                    onClick={handleClearGenres}
-                    className="text-xs text-teal-300 hover:underline"
-                  >
-                    Clear
-                  </button>
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={handleClearGenres}
+                      className="text-xs text-teal-300 hover:underline"
+                    >
+                      Clear
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowGenres(false)}
+                      className="text-xs text-gray-300 hover:underline"
+                    >
+                      Close
+                    </button>
+                  </div>
                 </div>
                 <ul
                   className="max-h-56 overflow-y-auto divide-y divide-gray-800"
