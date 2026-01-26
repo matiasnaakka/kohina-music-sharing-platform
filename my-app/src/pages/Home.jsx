@@ -1,10 +1,9 @@
 import { useState, useEffect, lazy, Suspense, useMemo, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase, getPublicStorageUrl } from '../supabaseclient'
+import useFeed from '../hooks/useFeed'
 import NavBar from '../components/NavBar'
 import TracksList from '../components/TracksList'
-const AddToPlaylist = lazy(() => import('../components/AddToPlaylist'))
-const TrackComments = lazy(() => import('../components/TrackComments'))
 import { useLikesV2 } from '../hooks/useLikesV2'
 
 export default function Home({ session, player }) {
@@ -29,6 +28,10 @@ export default function Home({ session, player }) {
   const [sortOrder, setSortOrder] = useState('desc') // 'desc' | 'asc'
   const [likeCounts, setLikeCounts] = useState(new Map())
   const [likeCountsLoading, setLikeCountsLoading] = useState(false)
+
+  // Feed mode: 'all' (default) or 'following'
+  const [mode, setMode] = useState('all')
+  const { tracks: followingTracks, loading: followingLoading, error: followingError, refresh: refreshFollowing } = useFeed(session, mode)
 
   // Fetch display name (username) of the logged-in user
   useEffect(() => {
@@ -190,11 +193,16 @@ export default function Home({ session, player }) {
   // Fetch tracks, genres, and playlists on mount/user change
   useEffect(() => {
     fetchGenres()
-    fetchTracks()
+    if (mode === 'all') {
+      fetchTracks()
+    } else {
+      // following mode - use the feed hook
+      refreshFollowing()
+    }
     if (session?.user?.id) {
       fetchOwnPlaylists(session.user.id)
     }
-  }, [session?.user?.id, fetchGenres, fetchTracks, fetchOwnPlaylists])
+  }, [session?.user?.id, fetchGenres, fetchTracks, fetchOwnPlaylists, mode, refreshFollowing])
 
   // Filter tracks when genre selection changes (now supports multi-select)
   useEffect(() => {
@@ -235,6 +243,14 @@ export default function Home({ session, player }) {
       fetchLikedTracks(trackIds)
     }
   }, [tracks, fetchLikedTracks])
+
+  // When in following mode, mirror the hook-provided tracks into the local state
+  useEffect(() => {
+    if (mode === 'following') {
+      setTracks(followingTracks || [])
+      setFilteredTracks(followingTracks || [])
+    }
+  }, [mode, followingTracks])
 
   // NEW: apply sorting after filtering
   const displayedTracks = useMemo(() => {
@@ -380,6 +396,22 @@ export default function Home({ session, player }) {
 
           {/* NEW: Sort controls */}
           <div className="flex gap-2 items-center">
+            {isAuthenticated && (
+              <div className="flex items-center gap-2 mr-2">
+                <button
+                  className={mode === 'all' ? 'bg-teal-500 text-white px-3 py-1 rounded' : 'px-3 py-1 bg-gray-800 rounded text-white'}
+                  onClick={() => setMode('all')}
+                >
+                  All
+                </button>
+                <button
+                  className={mode === 'following' ? 'bg-teal-500 text-white px-3 py-1 rounded' : 'px-3 py-1 bg-gray-800 rounded text-white'}
+                  onClick={() => setMode('following')}
+                >
+                  Following
+                </button>
+              </div>
+            )}
             <label className="text-sm text-gray-300">
               Sort by{' '}
               <select
@@ -407,24 +439,26 @@ export default function Home({ session, player }) {
           </div>
         </div>
 
-        {error && (
+        {(error || followingError) && (
           <div className="bg-red-500 bg-opacity-25 text-red-100 p-3 rounded mb-4">
-            {error}
+            {error || followingError}
             <button 
-              onClick={fetchTracks}
+              onClick={mode === 'all' ? fetchTracks : refreshFollowing}
               className="ml-4 bg-red-700 px-2 py-1 rounded text-white"
             >
               Retry
             </button>
           </div>
         )}
-        
-        {loading ? (
+
+        {(loading || followingLoading) ? (
           <div className="text-white">Loading tracks...</div>
         ) : displayedTracks.length === 0 ? (
           <div className="text-white bg-gray-800 p-6 rounded">
             {selectedGenreIds.length > 0
               ? 'No tracks found for the selected genres. Try selecting different genres.'
+              : mode === 'following' && isAuthenticated
+              ? "You aren't following anyone yet or they have no public tracks."
               : 'No tracks available yet.'}
           </div>
         ) : (
@@ -445,6 +479,8 @@ export default function Home({ session, player }) {
             isAuthenticated={!!session?.user?.id}
             emptyMessage={selectedGenreIds.length > 0
               ? 'No tracks found for the selected genres. Try selecting different genres.'
+              : mode === 'following' && isAuthenticated
+              ? "You aren't following anyone yet or they have no public tracks."
               : 'No tracks available yet.'}
           />
         )}
