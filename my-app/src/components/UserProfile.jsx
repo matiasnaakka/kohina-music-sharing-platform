@@ -114,7 +114,7 @@ const UserProfile = ({ session, isModal = false, onClose, readOnly = false }) =>
       // Use a stable storage path
       const path = `${session.user.id}/avatar-${timestamp}.${ext}`
       
-      console.log('Uploading avatar...', uploadFile.name, 'size', uploadFile.size)
+      // Uploading avatar file
       
       // Upload avatar to Supabase Storage
       const { error: uploadError } = await supabase.storage
@@ -158,7 +158,7 @@ const UserProfile = ({ session, isModal = false, onClose, readOnly = false }) =>
       // Set success message
       setSuccess('Avatar updated successfully!')
       
-      console.log('Avatar update complete!')
+      // Avatar update complete
     } catch (err) {
       console.error('Avatar update failed:', err)
       setError(err.message || String(err))

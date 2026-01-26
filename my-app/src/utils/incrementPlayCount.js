@@ -28,10 +28,8 @@ export async function incrementPlayCount(trackId) {
   // Get the user's access token from the Supabase session
   let token = null
   try {
-    console.log('[incrementPlayCount] Fetching session...')
     const { data: { session } } = await supabase.auth.getSession()
     token = session?.access_token
-    console.log('[incrementPlayCount] Session retrieved. Token available:', !!token)
   } catch (err) {
     console.error('[incrementPlayCount] Error retrieving session:', err)
   }
@@ -44,12 +42,10 @@ export async function incrementPlayCount(trackId) {
   }
   
   const payload = { track_id: Number(id) }
-  console.log('[incrementPlayCount] Payload:', payload)
-  console.log('[incrementPlayCount] Edge Function URL:', EDGE_FN_URL)
+  // payload and EDGE_FN_URL are used in the request below
   
   let res
   try {
-    console.log('[incrementPlayCount] Making POST request...')
     res = await fetch(EDGE_FN_URL, {
       method: 'POST',
       headers: {
@@ -59,21 +55,19 @@ export async function incrementPlayCount(trackId) {
       },
       body: JSON.stringify(payload),
     })
-    console.log('[incrementPlayCount] Response received. Status:', res.status)
+    // response received
   } catch (networkErr) {
     console.error('[incrementPlayCount] Network error:', networkErr)
     throw networkErr
   }
   
   const text = await res.text()
-  console.log('[incrementPlayCount] Response text:', text)
   
   let data
   try {
     data = JSON.parse(text)
-    console.log('[incrementPlayCount] Parsed JSON:', data)
   } catch {
-    console.log('[incrementPlayCount] Could not parse as JSON, using raw text')
+    // Could not parse JSON, will use raw text
     data = text
   }
   
@@ -87,11 +81,9 @@ export async function incrementPlayCount(trackId) {
   
   // Expecting { ok: true, new_play_count: ... }
   if (data && data.new_play_count !== undefined) {
-    console.log(`✅ Play count incremented for track ${trackId}. New count: ${data.new_play_count}`)
     return data.new_play_count
   }
-  
-  // Fallback
-  console.log(`✅ Play count incremented for track ${trackId}.`, data)
+
+  // Fallback: return whatever the function returned
   return data
 }

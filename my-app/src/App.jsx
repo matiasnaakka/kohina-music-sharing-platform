@@ -497,8 +497,6 @@ const GlobalAudioPlayer = ({
     const sessionKey = `played:${track.id}:${session?.user?.id || 'anonymous'}`
 
     const startTimer = () => {
-      console.log('[GlobalAudioPlayer] startTimer called for track:', track?.id, 'user:', session?.user?.id)
-
       // Skip if recently incremented
       try {
         const last = sessionStorage.getItem(sessionKey)
@@ -506,15 +504,7 @@ const GlobalAudioPlayer = ({
         const timeSinceLast = last ? now - Number(last) : null
         const cooldownRemaining = last ? COOLDOWN_MS - timeSinceLast : 0
 
-        console.log('[GlobalAudioPlayer] Cooldown check:', {
-          sessionKey,
-          lastIncrement: last ? new Date(Number(last)).toISOString() : 'never',
-          timeSinceLast: timeSinceLast ? `${(timeSinceLast / 1000 / 60).toFixed(1)} min ago` : 'never',
-          cooldownRemaining: cooldownRemaining > 0 ? `${(cooldownRemaining / 1000 / 60).toFixed(1)} min remaining` : 'expired',
-        })
-
         if (last && timeSinceLast < COOLDOWN_MS) {
-          console.log(`[GlobalAudioPlayer] ⏳ Skipping: cooldown active (${(cooldownRemaining / 1000 / 60).toFixed(1)} min remaining)`)
           return
         }
       } catch (err) {
@@ -523,27 +513,17 @@ const GlobalAudioPlayer = ({
 
       // Clear any existing timer
       if (timerRef.current) {
-        console.log('[GlobalAudioPlayer] Clearing existing timer')
         clearTimeout(timerRef.current)
       }
 
-      console.log(`[GlobalAudioPlayer] ⏱️ Setting new timer for ${THRESHOLD_MS / 1000} seconds`)
       timerRef.current = setTimeout(async () => {
-        console.log('[GlobalAudioPlayer] 5-second threshold reached for track:', track.id)
         try {
-          console.log('[GlobalAudioPlayer] Calling incrementPlayCount for track:', track.id)
           await incrementPlayCount(track.id)
-          console.log('[GlobalAudioPlayer] ✅ incrementPlayCount succeeded')
 
           // Mark as incremented in sessionStorage
           try {
             const now = Date.now()
             sessionStorage.setItem(sessionKey, String(now))
-            console.log('[GlobalAudioPlayer] 📌 Stored cooldown marker:', {
-              key: sessionKey,
-              timestamp: new Date(now).toISOString(),
-              cooldownUntil: new Date(now + COOLDOWN_MS).toISOString(),
-            })
           } catch (err) {
             console.warn('[GlobalAudioPlayer] Could not store cooldown marker:', err)
           }

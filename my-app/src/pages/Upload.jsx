@@ -156,7 +156,6 @@ export default function Upload({ session, player }) {
         console.error('Error fetching genres:', error)
         setError(`Error loading genres: ${error.message}`)
       } else {
-        console.log('Genres fetched successfully:', data)
         setGenres(data || [])
       }
     } catch (err) {
@@ -187,7 +186,6 @@ export default function Upload({ session, player }) {
         console.error('Error fetching tracks:', error)
         setError(`Error loading tracks: ${error.message}`)
       } else {
-        console.log('Tracks fetched successfully:', data)
         setTracks(data || [])
       }
     } catch (err) {
@@ -331,7 +329,6 @@ export default function Upload({ session, player }) {
     }
     
     // Verify user is authenticated
-    console.log('User ID:', session?.user?.id)
     if (!session?.user?.id) {
       setError('Authentication required')
       return
@@ -346,14 +343,14 @@ export default function Upload({ session, player }) {
       const fileName = `${Date.now()}-${sanitizeFileName(audioToUpload.name)}`
       const filePath = `${session.user.id}/${fileName}`
       
-      console.log('Uploading file:', { filePath, fileType: audioToUpload.type, fileSize: audioToUpload.size })
+      // Uploading file details available in local variables
       
       // 2. Upload audio file
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('audio')
         .upload(filePath, audioToUpload, { upsert: true })
       
-      console.log('Upload response:', { uploadData, uploadError })
+      // upload response handled by uploadError / uploadData checks
       
       if (uploadError) {
         throw new Error(`Upload error: ${uploadError.message}`)
@@ -410,7 +407,7 @@ export default function Upload({ session, player }) {
         image_path: imageUploadData?.path || imagePath
       }
       
-      console.log('Inserting track data:', trackData)
+      // Inserting track data
       
       const { error: insertError } = await supabase
         .from('tracks')
