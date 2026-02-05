@@ -1,10 +1,11 @@
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseclient'
 import NavBar from '../components/NavBar'
 import { useLikesV2 } from '../hooks/useLikesV2'
 import { normalizeUuid } from '../utils/securityUtils'
 import TrackCard from '../components/TrackCard'
+import usePlaylist from '../hooks/usePlaylist'
 
 export default function Playlist({ session, player }) {
   const location = useLocation()
@@ -13,114 +14,22 @@ export default function Playlist({ session, player }) {
   const rawPlaylistId = searchParams.get('id')
   const playlistId = useMemo(() => normalizeUuid(rawPlaylistId) ?? (rawPlaylistId?.trim() || null), [rawPlaylistId])
 
-  const [playlist, setPlaylist] = useState(null)
-  const [tracks, setTracks] = useState([])
-  const [likeCounts, setLikeCounts] = useState(new Map())
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
-  const [isOwner, setIsOwner] = useState(false)
-  const [removing, setRemoving] = useState(null)
   const [expandedComments, setExpandedComments] = useState(null)
 
   const { isLiked, toggleLike, fetchLikedTracks } = useLikesV2(session?.user?.id)
 
-  const fetchPlaylist = useCallback(async () => {
-    setLoading(true)
-    setError(null)
-    try {
-      const { data: playlistData, error: playlistError } = await supabase
-        .from('playlists')
-        .select('id, title, description, owner, is_public, created_at, updated_at')
-        .eq('id', playlistId)
-        .single()
-
-      if (playlistError) throw playlistError
-      if (!playlistData) throw new Error('Playlist not found')
-
-      const ownerCheck = session?.user?.id === playlistData.owner
-      setIsOwner(ownerCheck)
-
-      if (!playlistData.is_public && !ownerCheck) {
-        throw new Error('This playlist is private')
-      }
-
-      setPlaylist(playlistData)
-
-      const { data: tracksData, error: tracksError } = await supabase
-        .from('playlist_tracks')
-        .select(`
-          id,
-          track_id,
-          created_at,
-          tracks (
-            id,
-            title,
-            artist,
-            album,
-            audio_path,
-            image_path,
-            user_id,
-            created_at,
-            play_count,
-            genres(name),
-            profiles!tracks_user_id_fkey(username, avatar_url)
-          )
-        `)
-        .eq('playlist_id', playlistId)
-        .order('created_at', { ascending: false })
-
-      if (tracksError) throw tracksError
-
-      const mappedTracks = (tracksData || [])
-        .filter((pt) => pt.tracks)
-        .map((pt) => ({
-          ...pt.tracks,
-          playlistTrackId: pt.id,
-          addedAt: pt.created_at,
-        }))
-
-      setTracks(mappedTracks)
-
-      // Fetch like counts for these tracks
-      const ids = mappedTracks.map((t) => t.id).filter(Boolean)
-      if (ids.length) {
-        try {
-          const { data: likesRows, error: likesErr } = await supabase
-            .from('track_likes')
-            .select('track_id')
-            .in('track_id', ids)
-
-          if (likesErr) throw likesErr
-
-          const counts = new Map()
-          for (const row of likesRows || []) {
-            const tid = row.track_id
-            counts.set(tid, (counts.get(tid) || 0) + 1)
-          }
-          setLikeCounts(counts)
-        } catch (likesError) {
-          console.warn('Failed to load like counts for playlist tracks:', likesError)
-          setLikeCounts(new Map())
-        }
-      } else {
-        setLikeCounts(new Map())
-      }
-    } catch (err) {
-      console.error('Error fetching playlist:', err)
-      setError(err.message)
-    } finally {
-      setLoading(false)
-    }
-  }, [playlistId, session?.user?.id])
-
-  useEffect(() => {
-    if (!playlistId) {
-      setError('Playlist ID not provided')
-      setLoading(false)
-      return
-    }
-    fetchPlaylist()
-  }, [playlistId, session?.user?.id, fetchPlaylist])
+  const {
+    playlist,
+    tracks,
+    likeCounts,
+    loading,
+    error,
+    isOwner,
+    removing,
+    deleting,
+    removeTrack,
+    deletePlaylist,
+  } = usePlaylist(playlistId, session?.user?.id)
 
   useEffect(() => {
     const trackIds = tracks.map((t) => t.id)
@@ -128,24 +37,6 @@ export default function Playlist({ session, player }) {
       fetchLikedTracks(trackIds)
     }
   }, [tracks, fetchLikedTracks])
-
-  const handleRemoveTrack = async (playlistTrackId) => {
-    if (!isOwner) return
-    setRemoving(playlistTrackId)
-    try {
-      const { error } = await supabase
-        .from('playlist_tracks')
-        .delete()
-        .eq('id', playlistTrackId)
-
-      if (error) throw error
-      setTracks(tracks.filter((t) => t.playlistTrackId !== playlistTrackId))
-    } catch (err) {
-      setError(err.message)
-    } finally {
-      setRemoving(null)
-    }
-  }
 
   const handleSignOut = async () => {
     await supabase.auth.signOut()
@@ -158,6 +49,18 @@ export default function Playlist({ session, player }) {
       month: 'short',
       day: 'numeric',
     })
+  }
+
+  const handleDeleteClick = async () => {
+    if (!isOwner) return
+    const ok = window.confirm('Are you sure you want to permanently delete this playlist?')
+    if (!ok) return
+    try {
+      await deletePlaylist()
+      navigate('/home')
+    } catch (err) {
+      console.error(err)
+    }
   }
 
   if (loading)
@@ -192,6 +95,18 @@ export default function Playlist({ session, player }) {
             {tracks.length} {tracks.length === 1 ? 'track' : 'tracks'} • Created {formatDate(playlist?.created_at)} • Updated {formatDate(playlist?.updated_at)}
           </p>
           {!playlist?.is_public && <p className="text-xs text-gray-500 mt-1">🔒 Private Playlist</p>}
+          {isOwner && (
+            <div className="mt-3">
+              <button
+                type="button"
+                onClick={handleDeleteClick}
+                disabled={deleting}
+                className="bg-red-600 text-white px-3 py-1 rounded text-sm hover:bg-red-500 disabled:opacity-60"
+              >
+                {deleting ? 'Deleting...' : 'Delete playlist'}
+              </button>
+            </div>
+          )}
         </div>
 
         {tracks.length === 0 ? (
@@ -220,7 +135,7 @@ export default function Playlist({ session, player }) {
                   <div className="flex justify-end">
                     <button
                       type="button"
-                      onClick={() => handleRemoveTrack(track.playlistTrackId)}
+                      onClick={() => removeTrack(track.playlistTrackId)}
                       disabled={removing === track.playlistTrackId}
                       className="bg-red-600 text-white px-3 py-1 rounded text-xs hover:bg-red-500 disabled:opacity-60"
                     >
