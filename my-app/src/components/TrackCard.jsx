@@ -84,19 +84,21 @@ export default function TrackCard({
               className="absolute inset-0 rounded-xl bg-linear-to-br from-teal-500/15 via-transparent to-amber-400/10 blur-lg"
               aria-hidden="true"
             />
-            <img
-              src={coverSrc}
-              alt={`${track.title} cover`}
-              className="relative w-24 h-24 sm:w-28 sm:h-28 object-cover rounded-xl border border-gray-700 shadow-lg"
-              width="112"
-              height="112"
-              decoding="async"
-              fetchpriority={idx === 0 ? 'high' : undefined}
-              loading={idx === 0 ? 'eager' : 'lazy'}
-              onError={(e) => {
-                e.target.src = profileAvatar || '/images/default-avatar.png'
-              }}
-            />
+            <Link to={`/track?id=${track.id}`} aria-label={`Open track ${track.title}`}>
+              <img
+                src={coverSrc}
+                alt={`${track.title} cover`}
+                className="relative w-24 h-24 sm:w-28 sm:h-28 object-cover rounded-xl border border-gray-700 shadow-lg"
+                width="112"
+                height="112"
+                decoding="async"
+                fetchpriority={idx === 0 ? 'high' : undefined}
+                loading={idx === 0 ? 'eager' : 'lazy'}
+                onError={(e) => {
+                  e.target.src = profileAvatar || '/images/default-avatar.png'
+                }}
+              />
+            </Link>
           </div>
 
           <div className="flex-1 space-y-1.5">
