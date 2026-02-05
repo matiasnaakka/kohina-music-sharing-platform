@@ -659,6 +659,8 @@ export default function Profile({ session, player }) {
                       playlists={ownPlaylists}
                       loading={ownPlaylistsLoading}
                       error={ownPlaylistsError}
+                      isOwner
+                      onRename={(id, newTitle) => setOwnPlaylists((prev) => prev.map(p => (p.id === id ? { ...p, title: newTitle } : p)))}
                     />
                     <SidebarLikedTracks
                       tracks={likedTracks}
